@@ -38,3 +38,28 @@ yarn-error.log*
 *.pem
 Antigravity IDE/
 
+# Debug & temporary test artifacts
+backend-response.json
+output.json
+serpapi_immersive_raw.json
+serpapi_shopping_raw.json
+diagnose-matching.ts
+test-iphone16.ts
+test-matching.ts
+
+apps/web/discovery_output.txt
+apps/web/identity_audit_output.txt
+apps/web/identity_enriched_output.txt
+apps/web/identity_evidence_output.txt
+apps/web/identity_output.txt
+apps/web/immersive.json
+apps/web/serpapi-raw.json
+apps/web/patch.cjs
+
+apps/extension/scratch_amazon_test.ts
+apps/extension/test_confidence.ts
+apps/extension/test_croma_provider.ts
+apps/extension/test_intelligence.ts
+apps/extension/.env
+
+
