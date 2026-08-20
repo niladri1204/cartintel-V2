@@ -10,6 +10,7 @@ import type {
   CandidateDecisionEvaluation
 } from "./decisionTypes";
 import { evaluateDecisionInputs } from "./decisionEvaluator";
+import { evaluateElectronicsOfferValue } from "../valueIntelligence";
 
 function calculateRequirementScore(evalData: CandidateDecisionEvaluation): number {
   const reqEvals = evalData.explicitRequirementEvaluations;
@@ -46,7 +47,8 @@ function calculatePreferenceScore(evalData: CandidateDecisionEvaluation): number
 
 function calculateValueScore(
   candidate: RecommendationCandidate,
-  allCandidates: RecommendationCandidate[]
+  allCandidates: RecommendationCandidate[],
+  request?: RecommendationRequest | null
 ): number {
   const price = candidate.product?.originalPrice;
   const currency = candidate.product?.originalCurrency;
@@ -60,16 +62,40 @@ function calculateValueScore(
     .map(c => (c.product?.originalCurrency === currency ? c.product?.originalPrice : null))
     .filter((p): p is number => p != null && typeof p === "number");
 
+  let priceScore = candidate.priceAvailabilityScore || 75;
+  if (sameCurrencyPrices.length > 1) {
+    const minPrice = Math.min(...sameCurrencyPrices);
+    const maxPrice = Math.max(...sameCurrencyPrices);
+    if (maxPrice !== minPrice) {
+      const relativeRatio = (maxPrice - price) / (maxPrice - minPrice);
+      priceScore = Math.round(50 + 50 * relativeRatio);
+    }
+  }
+
+  if (candidate.product?.category === "Electronics" && request) {
+    const merchantScore = candidate.marketplaceReliabilityScore || 50;
+    const qualityScore = candidate.qualityScore || 50;
+    const rankingScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 50));
+    const qualityReputationScore = 0.40 * merchantScore + 0.35 * qualityScore + 0.25 * rankingScore;
+    const baseValueScore = 0.60 * qualityReputationScore + 0.40 * priceScore;
+
+    const assessment = evaluateElectronicsOfferValue(
+      candidate,
+      request,
+      allCandidates,
+      baseValueScore,
+      priceScore
+    );
+    return assessment.overallValueScore;
+  }
+
+  // Fallback: Phase 1 relative price score
   if (sameCurrencyPrices.length <= 1) {
     return candidate.priceAvailabilityScore || 75;
   }
-
   const minPrice = Math.min(...sameCurrencyPrices);
   const maxPrice = Math.max(...sameCurrencyPrices);
-
   if (maxPrice === minPrice) return 75;
-
-  // Cheaper relative price gets higher value score (50 to 100)
   const relativeRatio = (maxPrice - price) / (maxPrice - minPrice);
   return Math.round(50 + 50 * relativeRatio);
 }
@@ -156,7 +182,7 @@ export function selectBestRecommendation(
         requirementScore: calculateRequirementScore(evalData),
         preferenceScore: calculatePreferenceScore(evalData),
         rankingScoreComponent: Math.min(100, Math.max(0, candidate.finalRankingScore || 0)),
-        valueScore: calculateValueScore(candidate, candList),
+        valueScore: calculateValueScore(candidate, candList, request),
         finalDecisionScore: 0
       };
       scoredEvaluations.push({
@@ -170,7 +196,7 @@ export function selectBestRecommendation(
 
     const reqScore = calculateRequirementScore(evalData);
     const prefScore = calculatePreferenceScore(evalData);
-    const valScore = calculateValueScore(candidate, candList);
+    const valScore = calculateValueScore(candidate, candList, request);
     const rankScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 0));
 
     // Eligibility component score: 1.0 for eligible, 0.5 for unknown

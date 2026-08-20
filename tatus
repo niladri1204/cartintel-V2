@@ -1,0 +1,22 @@
+warning: in the working copy of 'apps/extension/src/intelligence/attributes.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/decision/__tests__/productDecision.test.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/decision/decisionEvaluator.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/decision/decisionIntelligence.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/decision/offerDecision.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/engine.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/extractors/electronics.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/matching.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/parser.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/ranking.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/extension/src/intelligence/types.ts', LF will be replaced by CRLF the next time Git touches it
+ apps/extension/src/intelligence/attributes.ts      |  37 [32m++[m[31m-[m
+ .../src/intelligence/decision/decisionEvaluator.ts |  14 [32m+[m
+ .../intelligence/decision/decisionIntelligence.ts  |  40 [32m++[m[31m-[m
+ .../src/intelligence/decision/offerDecision.ts     |  14 [32m+[m[31m-[m
+ apps/extension/src/intelligence/engine.ts          |  19 [32m++[m
+ .../src/intelligence/extractors/electronics.ts     | 341 [32m+++++++++++++++++++[m[31m--[m
+ apps/extension/src/intelligence/matching.ts        |  73 [32m++++[m[31m-[m
+ apps/extension/src/intelligence/parser.ts          |  72 [32m++++[m[31m-[m
+ apps/extension/src/intelligence/ranking.ts         |  82 [32m++++[m[31m-[m
+ apps/extension/src/intelligence/types.ts           |  20 [32m++[m
+ 10 files changed, 646 insertions(+), 66 deletions(-)

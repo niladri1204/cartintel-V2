@@ -31,6 +31,24 @@ export interface ProductAttributes {
   author: string | null;
   publisher: string | null;
   isbn: string | null;
+
+  // Phase 2.1 Deep Electronics Specifications
+  displaySize: string | null;
+  resolution: string | null;
+  refreshRate: string | null;
+  displayTechnology: string | null;
+  batteryCapacity: string | null;
+  chargingCapability: string | null;
+  cameraSpecs: string | null;
+  connectivity: string | null;
+  networkGeneration: string | null;
+  operatingSystem: string | null;
+  ports: string | null;
+  wirelessStandards: string | null;
+  generation: string | null;
+  regionVersion: string | null;
+  warranty: string | null;
+  variantSignature: string | null;
 }
 
 export function createEmptyAttributes(): ProductAttributes {
@@ -55,7 +73,24 @@ export function createEmptyAttributes(): ProductAttributes {
     display: null,
     author: null,
     publisher: null,
-    isbn: null
+    isbn: null,
+
+    displaySize: null,
+    resolution: null,
+    refreshRate: null,
+    displayTechnology: null,
+    batteryCapacity: null,
+    chargingCapability: null,
+    cameraSpecs: null,
+    connectivity: null,
+    networkGeneration: null,
+    operatingSystem: null,
+    ports: null,
+    wirelessStandards: null,
+    generation: null,
+    regionVersion: null,
+    warranty: null,
+    variantSignature: null
   };
 }
 

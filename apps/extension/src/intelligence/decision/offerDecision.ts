@@ -7,6 +7,7 @@ import type {
   OfferDecisionResult
 } from "./decisionTypes";
 import { evaluateDecisionInputs } from "./decisionEvaluator";
+import { evaluateElectronicsOfferValue } from "../valueIntelligence";
 
 function getNumericPrice(candidate: RecommendationCandidate): number | null {
   const p = candidate.product?.originalPrice;
@@ -162,7 +163,18 @@ export function evaluateOfferLevelDecisions(
     const qualityReputationScore = 0.40 * merchantScore + 0.35 * qualityScore + 0.25 * rankingScore;
 
     // Value score balances high quality/reputation with price efficiency
-    const valueScore = 0.60 * qualityReputationScore + 0.40 * priceScore;
+    let valueScore = 0.60 * qualityReputationScore + 0.40 * priceScore;
+
+    if (candidate.product?.category === "Electronics") {
+      const assessment = evaluateElectronicsOfferValue(
+        candidate,
+        req,
+        eligibleOffers,
+        valueScore,
+        priceScore
+      );
+      valueScore = assessment.overallValueScore;
+    }
 
     return { candidate, valueScore, qualityReputationScore };
   });

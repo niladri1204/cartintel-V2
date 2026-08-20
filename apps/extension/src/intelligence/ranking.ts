@@ -3,6 +3,7 @@ import type { ProductIdentity } from "./resolver";
 import { compareProducts } from "./matching";
 import type { MatchResult } from "./matching";
 import { normalizeMarketplaceName } from "./marketplace";
+import { compareSpecs } from "./variant";
 
 export type VariantMatchState = "explicitly_matching" | "missing_unknown" | "explicitly_conflicting";
 
@@ -993,24 +994,66 @@ export function evaluateVariantState(
   current: ProductIntelligence,
   candidate: ProductIntelligence
 ): VariantMatchState {
+  const title1 = (current.originalTitle || current.normalizedTitle || "").toLowerCase();
+  const title2 = (candidate.originalTitle || candidate.normalizedTitle || "").toLowerCase();
+
+  const ACCESSORY_REGEX =
+    /\b(?:case|cover|screen\s*protector|tempered\s*glass|protective\s*glass|screen\s*guard|phone\s*cover|mobile\s*cover|back\s*cover|bumper\s*case|charger|charging\s*cable|charging\s*adapter|adapter|cable|replacement\s*battery|battery\s*replacement|replacement\s*screen|replacement\s*display|lens\s*protector|camera\s*protector|keyboard\s*cover|laptop\s*sleeve)\b/i;
+
+  const BUNDLE_REGEX =
+    /\b(?:combo|bundle|kit|pack\s+with|with\s+case|with\s+charger|with\s+cover|with\s+screen\s+protector)\b|\+\s*(?:case|charger|cover|screen\s*protector)\b/i;
+
+  const isRefurb1 = /\b(?:refurbished|pre-owned|renewed|used|unboxed|open\s*box)\b/i.test(title1);
+  const isRefurb2 = /\b(?:refurbished|pre-owned|renewed|used|unboxed|open\s*box)\b/i.test(title2);
+
+  const isBundle1 = BUNDLE_REGEX.test(title1);
+  const isBundle2 = BUNDLE_REGEX.test(title2);
+
+  const isAccessory1 = ACCESSORY_REGEX.test(title1);
+  const isAccessory2 = ACCESSORY_REGEX.test(title2);
+
+  if (isRefurb1 !== isRefurb2) return "explicitly_conflicting";
+  if (isBundle1 !== isBundle2) return "explicitly_conflicting";
+  if (isAccessory1 !== isAccessory2) return "explicitly_conflicting";
+
   let hasExplicitMatch = false;
   let hasExplicitConflict = false;
+  let hasMissingOverlap = false;
 
-  // 1. RAM Check
-  if (current.ram && candidate.ram) {
-    if (current.ram.trim().toLowerCase() === candidate.ram.trim().toLowerCase()) {
-      hasExplicitMatch = true;
-    } else {
-      hasExplicitConflict = true;
+  const specKeys = [
+    "ram",
+    "storage",
+    "processor",
+    "gpu",
+    "displaySize",
+    "resolution",
+    "refreshRate",
+    "displayTechnology",
+    "batteryCapacity",
+    "cameraSpecs",
+    "connectivity",
+    "networkGeneration",
+    "operatingSystem",
+    "ports",
+    "wirelessStandards",
+    "generation",
+    "regionVersion",
+    "warranty"
+  ] as const;
+
+  for (const key of specKeys) {
+    const val1 = current[key];
+    const val2 = candidate[key];
+
+    if ((val1 && !val2) || (!val1 && val2)) {
+      hasMissingOverlap = true;
     }
-  }
 
-  // 2. Storage Check
-  if (current.storage && candidate.storage) {
-    if (current.storage.trim().toLowerCase() === candidate.storage.trim().toLowerCase()) {
-      hasExplicitMatch = true;
-    } else {
+    const cmp = compareSpecs(key, val1, val2);
+    if (cmp === "conflict") {
       hasExplicitConflict = true;
+    } else if (cmp === "match") {
+      hasExplicitMatch = true;
     }
   }
 
@@ -1018,12 +1061,19 @@ export function evaluateVariantState(
     return "explicitly_conflicting";
   }
 
-  if (hasExplicitMatch) {
+  if (hasExplicitMatch && !hasMissingOverlap) {
     return "explicitly_matching";
   }
 
-  // If neither specified RAM or Storage, or both have identical empty attributes
-  if (!current.ram && !current.storage && !candidate.ram && !candidate.storage) {
+  if (hasExplicitMatch && hasMissingOverlap) {
+    return "missing_unknown";
+  }
+
+  // Check if both have absolutely no specs
+  const currentHasAnySpec = specKeys.some(k => !!current[k]);
+  const candidateHasAnySpec = specKeys.some(k => !!candidate[k]);
+
+  if (!currentHasAnySpec && !candidateHasAnySpec) {
     return "explicitly_matching";
   }
 

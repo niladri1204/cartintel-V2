@@ -6,6 +6,7 @@ import { extractQuantity } from "./quantity";
 import { extractBrand } from "./brand";
 import { extractModel } from "./model";
 import { extractAttributes } from "./attributes";
+import { generateVariantSignature } from "./variant";
 
 export interface ParsedProduct {
   normalizedTitle: string | null;
@@ -29,6 +30,28 @@ export interface ParsedProduct {
   language: string | null;
   edition: string | null;
   attributes: string[];
+
+  // Phase 2.1 Deep Electronics Specifications
+  processor: string | null;
+  gpu: string | null;
+  displaySize: string | null;
+  resolution: string | null;
+  refreshRate: string | null;
+  displayTechnology: string | null;
+  batteryCapacity: string | null;
+  chargingCapability: string | null;
+  cameraSpecs: string | null;
+  connectivity: string | null;
+  networkGeneration: string | null;
+  operatingSystem: string | null;
+  ports: string | null;
+  wirelessStandards: string | null;
+  generation: string | null;
+  regionVersion: string | null;
+  warranty: string | null;
+
+  // Phase 2.2 Variant Intelligence
+  variantSignature: string | null;
 }
 
 /**
@@ -44,7 +67,7 @@ export function parseProductTitle(originalTitle: string | null): ParsedProduct {
   const brand = extractBrand(tokens);
   const attributesInfo = extractAttributes(tokens, categoryInfo.category);
 
-  return {
+  const result: ParsedProduct = {
     normalizedTitle,
     tokens,
     category: categoryInfo.category,
@@ -63,6 +86,51 @@ export function parseProductTitle(originalTitle: string | null): ParsedProduct {
     packCount: attributesInfo.packCount ? parseInt(attributesInfo.packCount, 10) || null : null,
     language: attributesInfo.language,
     edition: attributesInfo.edition,
-    attributes: []
+    attributes: [],
+
+    processor: attributesInfo.processor,
+    gpu: attributesInfo.gpu,
+    displaySize: attributesInfo.displaySize,
+    resolution: attributesInfo.resolution,
+    refreshRate: attributesInfo.refreshRate,
+    displayTechnology: attributesInfo.displayTechnology,
+    batteryCapacity: attributesInfo.batteryCapacity,
+    chargingCapability: attributesInfo.chargingCapability,
+    cameraSpecs: attributesInfo.cameraSpecs,
+    connectivity: attributesInfo.connectivity,
+    networkGeneration: attributesInfo.networkGeneration,
+    operatingSystem: attributesInfo.operatingSystem,
+    ports: attributesInfo.ports,
+    wirelessStandards: attributesInfo.wirelessStandards,
+    generation: attributesInfo.generation,
+    regionVersion: attributesInfo.regionVersion,
+    warranty: attributesInfo.warranty,
+    variantSignature: null
   };
+
+  const tempProd: any = {
+    originalTitle,
+    normalizedTitle,
+    ram: result.ram,
+    storage: result.storage,
+    processor: result.processor,
+    gpu: result.gpu,
+    displaySize: result.displaySize,
+    resolution: result.resolution,
+    refreshRate: result.refreshRate,
+    displayTechnology: result.displayTechnology,
+    batteryCapacity: result.batteryCapacity,
+    cameraSpecs: result.cameraSpecs,
+    connectivity: result.connectivity,
+    networkGeneration: result.networkGeneration,
+    operatingSystem: result.operatingSystem,
+    ports: result.ports,
+    wirelessStandards: result.wirelessStandards,
+    generation: result.generation,
+    regionVersion: result.regionVersion,
+    warranty: result.warranty
+  };
+
+  result.variantSignature = generateVariantSignature(tempProd);
+  return result;
 }

@@ -12,6 +12,7 @@ import type {
   CandidateDecisionEvaluation,
   DecisionEvaluationResult
 } from "./decisionTypes";
+import { evaluateElectronicsRequirementSingle, resolveSpecKey } from "../electronicsRequirement";
 
 function parseSpecNumber(val: any): number | null {
   if (typeof val === "number") return val;
@@ -160,6 +161,19 @@ export function evaluateExplicitRequirement(
   er: ExplicitRequirement,
   candidate: RecommendationCandidate
 ): ExplicitRequirementEvaluation {
+  const prod = candidate.product;
+  if (prod && prod.category === "Electronics" && resolveSpecKey(er.attribute) !== null) {
+    const fit = evaluateElectronicsRequirementSingle(er, prod);
+    let status: "matched" | "not_matched" | "unknown" = "unknown";
+    if (fit.status === "satisfied") status = "matched";
+    else if (fit.status === "not_satisfied") status = "not_matched";
+    return {
+      requirement: er,
+      status,
+      reason: fit.explanation
+    };
+  }
+
   const candVal = getCandidateAttribute(candidate, er.attribute);
   if (candVal == null) {
     return { requirement: er, status: "unknown", reason: `Candidate ${er.attribute} data unavailable` };

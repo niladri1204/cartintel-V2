@@ -1,4 +1,5 @@
 import type { ProductIntelligence } from "./types";
+import { cleanSpecForComparison } from "./variant";
 
 export interface MatchResult {
   score: number;
@@ -152,6 +153,37 @@ export function compareProducts(
   compareVariantField("color", left.color, right.color, 5);
   compareVariantField("variant", left.variant, right.variant, 5);
 
+  const compareDeepVariantField = (name: string, val1: any, val2: any) => {
+    if (isComparable(val1, val2)) {
+      const c1 = cleanSpecForComparison(name, String(val1));
+      const c2 = cleanSpecForComparison(name, String(val2));
+      if (c1 && c2) {
+        if (c1 === c2) {
+          matchedFields.push(name);
+        } else {
+          mismatchedFields.push(name);
+        }
+      }
+    }
+  };
+
+  compareDeepVariantField("processor", left.processor, right.processor);
+  compareDeepVariantField("gpu", left.gpu, right.gpu);
+  compareDeepVariantField("displaySize", left.displaySize, right.displaySize);
+  compareDeepVariantField("resolution", left.resolution, right.resolution);
+  compareDeepVariantField("refreshRate", left.refreshRate, right.refreshRate);
+  compareDeepVariantField("displayTechnology", left.displayTechnology, right.displayTechnology);
+  compareDeepVariantField("batteryCapacity", left.batteryCapacity, right.batteryCapacity);
+  compareDeepVariantField("cameraSpecs", left.cameraSpecs, right.cameraSpecs);
+  compareDeepVariantField("connectivity", left.connectivity, right.connectivity);
+  compareDeepVariantField("networkGeneration", left.networkGeneration, right.networkGeneration);
+  compareDeepVariantField("operatingSystem", left.operatingSystem, right.operatingSystem);
+  compareDeepVariantField("ports", left.ports, right.ports);
+  compareDeepVariantField("wirelessStandards", left.wirelessStandards, right.wirelessStandards);
+  compareDeepVariantField("generation", left.generation, right.generation);
+  compareDeepVariantField("regionVersion", left.regionVersion, right.regionVersion);
+  compareDeepVariantField("warranty", left.warranty, right.warranty);
+
   const finalScore = Math.min(score, 100);
 
   let decision: string;
@@ -169,21 +201,34 @@ export function compareProducts(
     decision = "No Match";
     similarityType = "Different Product";
     isMatch = false;
-  } else if (mismatchedFields.includes("storage")) {
+  } else if (
+    mismatchedFields.includes("storage") ||
+    mismatchedFields.includes("ram") ||
+    mismatchedFields.includes("color") ||
+    mismatchedFields.includes("variant") ||
+    mismatchedFields.includes("processor") ||
+    mismatchedFields.includes("gpu") ||
+    mismatchedFields.includes("displaySize") ||
+    mismatchedFields.includes("resolution") ||
+    mismatchedFields.includes("refreshRate") ||
+    mismatchedFields.includes("displayTechnology") ||
+    mismatchedFields.includes("batteryCapacity") ||
+    mismatchedFields.includes("cameraSpecs") ||
+    mismatchedFields.includes("connectivity") ||
+    mismatchedFields.includes("networkGeneration") ||
+    mismatchedFields.includes("operatingSystem") ||
+    mismatchedFields.includes("ports") ||
+    mismatchedFields.includes("wirelessStandards") ||
+    mismatchedFields.includes("generation") ||
+    mismatchedFields.includes("regionVersion") ||
+    mismatchedFields.includes("warranty")
+  ) {
     decision = "Likely Match";
-    similarityType = "Different Storage Variant";
-    isMatch = false;
-  } else if (mismatchedFields.includes("ram")) {
-    decision = "Likely Match";
-    similarityType = "Different RAM Variant";
-    isMatch = false;
-  } else if (mismatchedFields.includes("color")) {
-    decision = "Likely Match";
-    similarityType = "Different Color Variant";
-    isMatch = false;
-  } else if (mismatchedFields.includes("variant")) {
-    decision = "Likely Match";
-    similarityType = "Different Variant";
+    if (mismatchedFields.includes("storage")) similarityType = "Different Storage Variant";
+    else if (mismatchedFields.includes("ram")) similarityType = "Different RAM Variant";
+    else if (mismatchedFields.includes("color")) similarityType = "Different Color Variant";
+    else if (mismatchedFields.includes("variant")) similarityType = "Different Variant";
+    else similarityType = "Different Variant";
     isMatch = false;
   } else if (finalScore >= 95) {
     decision = "Exact Match";
