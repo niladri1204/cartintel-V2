@@ -8,6 +8,8 @@ import type {
 } from "./decisionTypes";
 import { evaluateDecisionInputs } from "./decisionEvaluator";
 import { evaluateElectronicsOfferValue } from "../valueIntelligence";
+import { areModelsMatching } from "../matching";
+import { ProductDomain, inferDomain } from "../domain";
 
 function getNumericPrice(candidate: RecommendationCandidate): number | null {
   const p = candidate.product?.originalPrice;
@@ -18,6 +20,57 @@ function getNumericPrice(candidate: RecommendationCandidate): number | null {
     return isNaN(parsed) || parsed <= 0 ? null : parsed;
   }
   return null;
+}
+
+function normalizeIdentityPart(value: string | null | undefined): string {
+  return (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function isSameCanonicalOfferFamily(
+  anchor: RecommendationCandidate["product"] | null | undefined,
+  candidate: RecommendationCandidate["product"] | null | undefined
+): boolean {
+  if (!anchor || !candidate) return false;
+
+  const anchorBrand = normalizeIdentityPart(anchor.brand);
+  const candidateBrand = normalizeIdentityPart(candidate.brand);
+
+  if (!anchorBrand || !candidateBrand || anchorBrand !== candidateBrand) {
+    return false;
+  }
+
+  if (!anchor.model || !candidate.model || !areModelsMatching(anchor.model, candidate.model, anchor.brand)) {
+    return false;
+  }
+
+  // Only enforce storage when BOTH sides explicitly know storage.
+  const anchorStorage = normalizeIdentityPart(anchor.storage);
+  const candidateStorage = normalizeIdentityPart(candidate.storage);
+
+  if (
+    anchorStorage &&
+    candidateStorage &&
+    anchorStorage !== candidateStorage
+  ) {
+    return false;
+  }
+
+  // RAM is enforced only when the anchor explicitly specifies RAM.
+  const anchorRam = normalizeIdentityPart(anchor.ram);
+  const candidateRam = normalizeIdentityPart(candidate.ram);
+
+  if (
+    anchorRam &&
+    candidateRam &&
+    anchorRam !== candidateRam
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -43,19 +96,33 @@ export function evaluateOfferLevelDecisions(
       bestOffer: null,
       cheapestOffer: null,
       bestValueOffer: null,
+      allEligibleOffers: [],
+      allOffers: [],
       eligibleOfferCount: 0,
       evaluatedOfferCount: 0
     };
   }
 
-  // Filter candidates belonging to the selected product group
+  // Filter candidates belonging to the selected canonical offer family
   const pool = candidates || productGroup.offers;
-  const productOffers = pool.filter(c => {
-    const fp = c.product?.fingerprint || c.product?.normalizedTitle || "unknown_product";
-    return fp === productGroup.fingerprint;
-  });
+  const anchorOffer =
+    productGroup.offers[0] ||
+    pool[0] ||
+    null;
 
-  const targetOffers = productOffers.length > 0 ? productOffers : productGroup.offers;
+  const productOffers = anchorOffer
+    ? pool.filter(candidate =>
+        isSameCanonicalOfferFamily(
+          anchorOffer.product,
+          candidate.product
+        )
+      )
+    : [];
+
+  const targetOffers =
+    productOffers.length > 0
+      ? productOffers
+      : productGroup.offers;
 
   // Evaluate hard-constraint eligibility: ineligible offers can NEVER win any selection
   const evalResult = evaluateDecisionInputs(req, targetOffers);
@@ -69,6 +136,8 @@ export function evaluateOfferLevelDecisions(
       bestOffer: null,
       cheapestOffer: null,
       bestValueOffer: null,
+      allEligibleOffers: [],
+      allOffers: [],
       eligibleOfferCount: 0,
       evaluatedOfferCount: targetOffers.length
     };
@@ -83,7 +152,7 @@ export function evaluateOfferLevelDecisions(
   let cheapestOffer: RecommendationCandidate | null = null;
   let primaryCurrency: string | null = null;
   let minPrice = Infinity;
-  let maxPrice = -Infinity;
+  let sameCurrencyOffers: RecommendationCandidate[] = [];
 
   if (validPriceOffers.length > 0) {
     // Group prices by currency; select majority currency
@@ -94,14 +163,13 @@ export function evaluateOfferLevelDecisions(
     }
     primaryCurrency = Array.from(currencyCounts.entries()).sort((a, b) => b[1] - a[1])[0][0];
 
-    const sameCurrencyOffers = validPriceOffers.filter(
+    sameCurrencyOffers = validPriceOffers.filter(
       c => c.product?.originalCurrency?.toUpperCase().trim() === primaryCurrency
     );
 
     if (sameCurrencyOffers.length > 0) {
       const prices = sameCurrencyOffers.map(c => getNumericPrice(c)!);
       minPrice = Math.min(...prices);
-      maxPrice = Math.max(...prices);
 
       const sortedCheapest = [...sameCurrencyOffers].sort((a, b) => {
         const pA = getNumericPrice(a)!;
@@ -124,22 +192,34 @@ export function evaluateOfferLevelDecisions(
   function getRelativePriceScore(candidate: RecommendationCandidate): number {
     const p = getNumericPrice(candidate);
     const curr = candidate.product?.originalCurrency ? candidate.product.originalCurrency.toUpperCase().trim() : null;
-    if (p == null || curr !== primaryCurrency || maxPrice === minPrice || minPrice === Infinity) {
+    if (p == null || curr !== primaryCurrency || minPrice === Infinity) {
       return candidate.priceAvailabilityScore || 75;
     }
-    const ratio = (maxPrice - p) / (maxPrice - minPrice);
-    return Math.round(50 + 50 * ratio);
+    const deviation = (p - minPrice) / minPrice;
+    const score = Math.max(50, Math.round(100 - 100 * deviation));
+    return score;
   }
 
-  // 2. Compute bestOffer (strongest overall offer: heavily prioritizes merchant reliability, ranking evidence, quality & availability)
-  const scoredBestOffers = eligibleOffers.map(candidate => {
+  // Filter eligible offers to those matching the primary currency for fair comparison
+  const comparableOffers = sameCurrencyOffers.length > 0 ? sameCurrencyOffers : eligibleOffers;
+
+  // 2. Compute bestOffer using price-dominant scoring
+  const scoredBestOffers = comparableOffers.map(candidate => {
     const priceScore = getRelativePriceScore(candidate);
     const merchantScore = candidate.marketplaceReliabilityScore || 50;
     const rankingScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 50));
     const qualityScore = candidate.qualityScore || 50;
-    const availScore = candidate.priceAvailabilityScore || 50;
 
-    const overallScore = 0.35 * merchantScore + 0.25 * rankingScore + 0.20 * qualityScore + 0.10 * availScore + 0.10 * priceScore;
+    const titleLower = (candidate.product?.originalTitle || "").toLowerCase();
+    const hasWarrantyBonus = titleLower.includes("official warranty") || titleLower.includes("manufacturer warranty") || (candidate.product?.confidence || 0) >= 98;
+    const warrantyBonus = hasWarrantyBonus ? 3 : 0;
+
+    const overallScore =
+      0.55 * priceScore +
+      0.20 * merchantScore +
+      0.15 * qualityScore +
+      0.10 * rankingScore +
+      warrantyBonus;
 
     return { candidate, overallScore, rankingScore, merchantScore };
   });
@@ -153,7 +233,7 @@ export function evaluateOfferLevelDecisions(
   const bestOffer = scoredBestOffers[0].candidate;
 
   // 3. Compute bestValueOffer (distinct from cheapestOffer: 60% quality/reputation + 40% price efficiency)
-  const scoredValueOffers = eligibleOffers.map(candidate => {
+  const scoredValueOffers = comparableOffers.map(candidate => {
     const priceScore = getRelativePriceScore(candidate);
     const merchantScore = candidate.marketplaceReliabilityScore || 50;
     const qualityScore = candidate.qualityScore || 50;
@@ -163,13 +243,14 @@ export function evaluateOfferLevelDecisions(
     const qualityReputationScore = 0.40 * merchantScore + 0.35 * qualityScore + 0.25 * rankingScore;
 
     // Value score balances high quality/reputation with price efficiency
-    let valueScore = 0.60 * qualityReputationScore + 0.40 * priceScore;
+    let valueScore = 0.50 * qualityReputationScore + 0.50 * priceScore;
 
-    if (candidate.product?.category === "Electronics") {
+    const candDomain = candidate.product?.domain || (candidate.product ? inferDomain(candidate.product.category, candidate.product.normalizedTitle) : null);
+    if (candDomain === ProductDomain.Electronics || candidate.product?.category === "Electronics" || candidate.product?.category?.toLowerCase() === "smartphone") {
       const assessment = evaluateElectronicsOfferValue(
         candidate,
         req,
-        eligibleOffers,
+        comparableOffers,
         valueScore,
         priceScore
       );
@@ -192,6 +273,8 @@ export function evaluateOfferLevelDecisions(
     bestOffer,
     cheapestOffer,
     bestValueOffer,
+    allEligibleOffers: eligibleOffers,
+    allOffers: eligibleOffers,
     eligibleOfferCount: eligibleOffers.length,
     evaluatedOfferCount: targetOffers.length
   };

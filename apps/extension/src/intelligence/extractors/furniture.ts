@@ -1,84 +1,94 @@
 import { type ProductAttributes, createEmptyAttributes } from "../attributes";
 
-const FURNITURE_COLORS = new Set([
-  "black",
-  "white",
-  "brown",
-  "walnut",
-  "oak",
-  "teak",
-  "mahogany",
-  "grey",
-  "gray",
-  "beige"
-]);
+const FURNITURE_COLORS: Record<string, string> = {
+  walnut: "Walnut",
+  oak: "Oak",
+  teak: "Teak",
+  mahogany: "Mahogany",
+  black: "Black",
+  white: "White",
+  brown: "Brown",
+  grey: "Grey",
+  gray: "Grey",
+  beige: "Beige"
+};
 
-const FURNITURE_MATERIALS = new Set([
-  "wood",
-  "metal",
-  "steel",
-  "plastic",
-  "glass",
-  "engineeredwood",
-  "plywood",
-  "mdf",
-  "bamboo",
-  "rattan"
-]);
-
-const FURNITURE_VARIANTS = new Set([
-  "chair",
-  "table",
-  "desk",
-  "bed",
-  "wardrobe",
-  "cabinet",
-  "sofa",
-  "stool",
-  "bookshelf",
-  "tvunit",
-  "dining",
-  "office"
-]);
-
-const DIMENSION_PATTERN = /^\d+x\d+(?:x\d+)?$/i;
-const UNIT_SIZE_PATTERN = /^\d+(cm|in|ft)$/i;
+const FURNITURE_MATERIALS: Record<string, string> = {
+  "solid wood": "Solid Wood",
+  "engineered wood": "Engineered Wood",
+  mdf: "MDF",
+  "particle board": "Particle Board",
+  plywood: "Plywood",
+  metal: "Metal",
+  steel: "Steel",
+  aluminium: "Aluminium",
+  aluminum: "Aluminium",
+  glass: "Glass",
+  plastic: "Plastic",
+  leather: "Leather",
+  "faux leather": "Faux Leather",
+  fabric: "Fabric",
+  velvet: "Velvet",
+  rattan: "Rattan",
+  cane: "Cane",
+  wood: "Wood"
+};
 
 /**
- * Furniture Attribute Extractor V1.
- * Detects color, size (dimensions/lengths), variant, and material (internal) in a single pass.
+ * Furniture Attribute Extractor V2.
+ * Extracts dimensions, material, color, seating capacity, and bed size configuration.
  */
 export function extractFurnitureAttributes(tokens: string[]): ProductAttributes {
   if (!tokens || tokens.length === 0) {
     return createEmptyAttributes();
   }
 
+  const text = tokens.join(" ");
+  const lowerText = text.toLowerCase();
+
   let color: string | null = null;
   let size: string | null = null;
+  let dimensions: string | null = null;
   let variant: string | null = null;
   let material: string | null = null;
 
-  for (const token of tokens) {
-    const lower = token.toLowerCase();
+  // 1. Dimensions Extraction (e.g. 180 x 80 x 75 cm, L 180cm x W 80cm x H 75cm, 120cm wide, 6 ft)
+  const dimMatch =
+    lowerText.match(/(?:l\s*)?\d+(?:\.\d+)?\s*(?:cm|mm|m|in|ft|inch|inches)?\s*x\s*(?:w\s*)?\d+(?:\.\d+)?(?:\s*x\s*(?:h|d\s*)?\d+(?:\.\d+)?)?\s*(cm|mm|m|in|ft|inch|inches)?/i) ||
+    lowerText.match(/\b\d+(?:\.\d+)?\s*(?:cm|mm|m|in|ft|inch|inches)\b/i);
 
-    // 1. Detect Color (first match)
-    if (!color && FURNITURE_COLORS.has(lower)) {
-      color = lower;
+  if (dimMatch) {
+    dimensions = dimMatch[0].trim();
+    size = dimensions;
+  }
+
+  // 2. Seating Capacity (e.g. 1 Seater, 2 Seater, 3 Seater, 6 Seater)
+  const seaterMatch = lowerText.match(/\b([1-9])\s*(?:seater|seat)\b/i);
+  if (seaterMatch) {
+    variant = `${seaterMatch[1]} Seater`;
+  }
+
+  // 3. Bed Size Configuration (e.g. King, Queen, Single, Double, Twin)
+  const bedSizeMatch = lowerText.match(/\b(king|queen|single|double|twin)\s*(?:size)?\b/i);
+  if (bedSizeMatch && !variant) {
+    const capitalized = bedSizeMatch[1].charAt(0).toUpperCase() + bedSizeMatch[1].slice(1).toLowerCase();
+    variant = `${capitalized} Size`;
+    if (!size) size = capitalized;
+  }
+
+  // 4. Material Extraction
+  for (const [key, name] of Object.entries(FURNITURE_MATERIALS)) {
+    if (lowerText.includes(key)) {
+      material = name;
+      break;
     }
+  }
 
-    // 2. Detect Material (internal detection)
-    if (!material && FURNITURE_MATERIALS.has(lower)) {
-      material = lower;
-    }
-
-    // 3. Detect Size (dimensions e.g. 120x60, 120x60x75 or unit lengths e.g. 120cm, 6ft)
-    if (!size && (DIMENSION_PATTERN.test(lower) || UNIT_SIZE_PATTERN.test(lower))) {
-      size = lower;
-    }
-
-    // 4. Detect Variant (first match)
-    if (!variant && FURNITURE_VARIANTS.has(lower)) {
-      variant = lower;
+  // 5. Color Family Extraction
+  for (const [key, name] of Object.entries(FURNITURE_COLORS)) {
+    if (lowerText.includes(key)) {
+      color = name;
+      break;
     }
   }
 
@@ -86,6 +96,7 @@ export function extractFurnitureAttributes(tokens: string[]): ProductAttributes 
     ...createEmptyAttributes(),
     color,
     size,
+    dimensions,
     variant,
     material
   };

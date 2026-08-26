@@ -31,16 +31,19 @@ export class SearchService {
    */
   private buildRequest(intelligence: ProductIntelligence): SearchRequest {
     return {
-      normalizedTitle: intelligence.normalizedTitle,
-      brand: intelligence.brand,
-      model: intelligence.model,
-      category: intelligence.category,
-      productType: intelligence.productType,
-      variant: intelligence.variant,
-      color: intelligence.color,
-      storage: intelligence.storage,
-      ram: intelligence.ram,
-      fingerprint: intelligence.fingerprint
+      normalizedTitle: intelligence.normalizedTitle ?? null,
+      brand: intelligence.brand ?? null,
+      model: intelligence.model ?? null,
+      category: intelligence.category ?? null,
+      productType: intelligence.productType ?? null,
+      variant: intelligence.variant ?? null,
+      color: intelligence.color ?? null,
+      storage: intelligence.storage ?? null,
+      ram: intelligence.ram ?? null,
+      fingerprint: intelligence.fingerprint,
+      googleProductId: intelligence.metadata?.googleProductId || (intelligence as any).googleProductId,
+      googleImmersiveToken: intelligence.metadata?.googleImmersiveToken || (intelligence as any).googleImmersiveToken,
+      useSellerExpansion: (intelligence as any).useSellerExpansion
     };
   }
 

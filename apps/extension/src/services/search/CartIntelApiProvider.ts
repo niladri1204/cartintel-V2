@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type { SearchProvider, SearchRequest, RawProductResult, SearchResult } from "./types";
 
 // Safe development default, overrideable by Vite environment variables

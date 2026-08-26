@@ -71,12 +71,26 @@ export function generateSearchQueries(
   const title = clean(input.title);
   const brand = clean(input.brand);
   const model = clean(input.model);
+  const rawCategory = clean(input.category);
+  const category = /^(uncategorized|unknown|null|undefined)$/i.test(rawCategory) ? "" : rawCategory;
 
   const identifiers = input.identifiers ?? {};
+  const attrs = input.attributes ?? {};
 
-  // --------------------------------------------------
+  const getAttr = (key: string): string =>
+    clean(attrs[key]);
+
+  const add = (
+    query: string,
+    type: GeneratedSearchQuery["type"],
+    priority: number
+  ) => {
+    addQuery(queries, query, type, priority);
+  };
+
+  // -------------------------------
   // LEVEL 1 — Exact identifiers
-  // --------------------------------------------------
+  // -------------------------------
 
   const identifierValues = [
     identifiers.gtin,
@@ -89,100 +103,129 @@ export function generateSearchQueries(
     .filter(Boolean);
 
   for (const identifier of identifierValues) {
-    addQuery(
-      queries,
-      identifier,
-      "exact_identifier",
-      100
-    );
+    add(identifier, "exact_identifier", 100);
   }
 
-  // --------------------------------------------------
-  // LEVEL 2 — Brand + model
-  // --------------------------------------------------
+  // -------------------------------
+  // LEVEL 2 — Exact identity
+  // -------------------------------
 
   if (brand && model) {
-    addQuery(
-      queries,
-      `${brand} ${model}`,
-      "exact_model",
-      90
-    );
+    add(`${brand} ${model}`, "exact_model", 95);
   }
 
-  // --------------------------------------------------
-  // LEVEL 3 — Brand + model + important attributes
-  // --------------------------------------------------
+  if (model) {
+    add(model, "exact_model", 90);
+  }
 
-  const importantAttributes = [
-    "ram",
-    "storage",
-    "capacity",
-    "size",
-    "color",
-    "generation",
-    "variant",
-    "processor",
-  ];
+  // -------------------------------
+  // LEVEL 3 — Identity + category
+  // -------------------------------
 
-  const attributeParts = importantAttributes
-    .map(key => {
-      const value = input.attributes?.[key];
+  if (brand && model && category) {
+    add(`${brand} ${model} ${category}`, "structured", 88);
+  }
 
-      if (
-        value === null ||
-        value === undefined ||
-        value === ""
-      ) {
-        return "";
-      }
+  // -------------------------------
+  // LEVEL 4 — Important variants
+  // -------------------------------
 
-      return clean(value);
-    })
-    .filter(Boolean);
+  const variantAttributes = [
+    ["ram", getAttr("ram")],
+    ["storage", getAttr("storage")],
+    ["capacity", getAttr("capacity")],
+    ["color", getAttr("color")],
+    ["size", getAttr("size")],
+    ["generation", getAttr("generation")],
+    ["variant", getAttr("variant")],
+    ["processor", getAttr("processor")],
+    ["gpu", getAttr("gpu")],
+    ["refreshRate", getAttr("refreshRate")],
+    ["resolution", getAttr("resolution")],
+  ] as const;
 
-  if (brand && model && attributeParts.length > 0) {
-    addQuery(
-      queries,
-      `${brand} ${model} ${attributeParts.join(" ")}`,
+  const presentAttributes = variantAttributes
+    .filter(([, value]) => Boolean(value))
+    .map(([, value]) => value);
+
+  if (brand && model && presentAttributes.length > 0) {
+    // Full variant query
+    add(
+      `${brand} ${model} ${presentAttributes.join(" ")}`,
       "structured",
-      80
+      85
+    );
+
+    // Important individual variant queries
+    for (const value of presentAttributes.slice(0, 4)) {
+      add(
+        `${brand} ${model} ${value}`,
+        "structured",
+        82
+      );
+    }
+  }
+
+  // -------------------------------
+  // LEVEL 5 — Manufacturer discovery
+  // -------------------------------
+
+  if (brand && model) {
+    add(
+      `${brand} ${model} official`,
+      "structured",
+      78
+    );
+
+    add(
+      `${brand} ${model} buy`,
+      "structured",
+      76
     );
   }
 
-  // --------------------------------------------------
-  // LEVEL 4 — Original product title
-  // --------------------------------------------------
+  // -------------------------------
+  // LEVEL 6 — Category fallback
+  // -------------------------------
+
+  if (brand && category) {
+    add(
+      `${brand} ${category}`,
+      "broad",
+      65
+    );
+  }
+
+  if (model && category) {
+    add(
+      `${model} ${category}`,
+      "broad",
+      63
+    );
+  }
+
+  // -------------------------------
+  // LEVEL 7 — Original title
+  // -------------------------------
 
   if (title) {
-    addQuery(
-      queries,
-      title,
-      "normalized",
-      70
-    );
+    add(title, "normalized", 60);
   }
 
-  // --------------------------------------------------
-  // LEVEL 5 — Broad fallback
-  // --------------------------------------------------
+  // -------------------------------
+  // LEVEL 8 — Broad identity fallback
+  // -------------------------------
 
   if (brand && title) {
     const titleLower = title.toLowerCase();
     const brandLower = brand.toLowerCase();
+
     const broadQuery = titleLower.startsWith(brandLower)
       ? title
       : `${brand} ${title}`;
 
-    addQuery(
-      queries,
-      broadQuery,
-      "broad",
-      50
-    );
+    add(broadQuery, "broad", 55);
   }
 
-  return queries.sort(
-    (a, b) => b.priority - a.priority
-  );
+  return queries.sort((a, b) => b.priority - a.priority);
 }

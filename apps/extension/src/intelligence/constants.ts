@@ -4,6 +4,8 @@ export const BEAUTY_KEYWORDS = ["lipstick", "cream", "serum", "shampoo", "gel", 
 export const FASHION_KEYWORDS = ["shirt", "shoe", "dress", "jeans", "t-shirt", "sneaker", "jacket", "pants"];
 export const ELECTRONICS_KEYWORDS = ["phone", "laptop", "earbuds", "headphones", "tv", "charger", "camera", "smartphone", "mobile", "iphone", "android", "pixel"];
 export const GROCERY_KEYWORDS = ["apple", "milk", "bread", "grocery", "rice", "dal", "coffee", "tea", "sugar"];
+export const FURNITURE_KEYWORDS = ["furniture", "sofa", "chair", "table", "bed", "desk", "wardrobe", "bookshelf", "cabinet", "dresser"];
+export const BOOKS_KEYWORDS = ["book", "novel", "textbook", "paperback", "hardcover", "edition", "author", "publisher", "isbn"];
 
 export const PACK_REGEX = /pack of (\d+)|(\d+)\s*pack|twin pack/i;
 export const QUANTITY_REGEX = /(?:(\d+)\s*[x×]\s*)?(\d+(?:\.\d+)?)\s*(ml|l|g|kg|oz|fl oz|pcs|pieces)\b/i;
@@ -22,7 +24,8 @@ export const KNOWN_BRANDS: string[] = [
     "tresemme", "pantene", "gillette", "old spice", "axe", "beardo", "vaseline",
     "nykaa", "olay", "nestle", "amul", "britannia", "parle", "tata", "maggi",
     "cadbury", "oreo", "lays", "doritos", "kurkure", "pringles", "pepsi", "sprite",
-    "horlicks", "complan", "bournvita", "colgate", "sensodyne", "dabur", "patanjali",
+    "nescafe", "davidoff", "horlicks", "complan", "bournvita", "colgate", "sensodyne", "dabur", "patanjali",
     "fortune", "saffola", "havells", "orient", "crompton", "bajaj", "pigeon",
-    "prestige", "wonderchef", "milton", "borosil", "google", "motorola", "nothing"
+    "prestige", "wonderchef", "milton", "borosil", "google", "motorola", "nothing",
+    "the ordinary", "ordinary", "ikea", "pepperfry"
 ];

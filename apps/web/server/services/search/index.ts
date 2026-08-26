@@ -62,5 +62,5 @@ export class BackendSearchService {
 // Export a singleton instance to be used by API routes
 export const searchService = new BackendSearchService();
 
-import { SerpApiGoogleShoppingProvider } from "./providers/SerpApiGoogleShoppingProvider";
-searchService.registerProvider(new SerpApiGoogleShoppingProvider());
+import { SerperGoogleShoppingProvider } from "./providers/SerperGoogleShoppingProvider";
+searchService.registerProvider(new SerperGoogleShoppingProvider());

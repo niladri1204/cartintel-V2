@@ -45,8 +45,15 @@ export class SerpApiGoogleShoppingProvider implements BackendSearchProvider {
       if (!urlStr) return null;
       try {
         const parsed = new URL(urlStr);
+        const host = parsed.hostname.toLowerCase();
+        const isGoogleHost =
+          host === "google.com" ||
+          host.endsWith(".google.com") ||
+          host === "google.co.in" ||
+          host.endsWith(".google.co.in");
+
         // Is it a Google redirect/tracking link?
-        if (parsed.hostname.includes("google.com") && (parsed.pathname === "/url" || parsed.pathname === "/aclk" || parsed.pathname === "/search")) {
+        if (isGoogleHost && (parsed.pathname === "/url" || parsed.pathname === "/aclk" || parsed.pathname === "/search")) {
           const extractedUrl = parsed.searchParams.get("url") || parsed.searchParams.get("q") || parsed.searchParams.get("adurl");
           if (extractedUrl) {
             return validateAndExtract(extractedUrl); // recursively validate the extracted URL
@@ -134,7 +141,7 @@ export class SerpApiGoogleShoppingProvider implements BackendSearchProvider {
         let currentPageToken = request.googleImmersiveToken;
         const productId = request.googleProductId;
         let pageCount = 0;
-        const maxPages = 3;
+        const maxPages = request.useSellerExpansion ? 1 : 3;
 
         while (pageCount < maxPages) {
           pageCount++;
@@ -191,12 +198,15 @@ export class SerpApiGoogleShoppingProvider implements BackendSearchProvider {
         
         const validResults: RawProductResult[] = [];
         for (const seller of sellers) {
+            if (!seller.name) continue;
+
             const sellerPrice = seller.extracted_price ?? seller.extracted_base_price ?? parseFloat(String(seller.base_price || seller.price || "").replace(/[^0-9.]/g, ''));
             if (isNaN(sellerPrice) || sellerPrice <= 0) continue;
             
             const sellerUrl = this.extractDirectMerchantUrl(seller.link, seller.direct_link);
+            if (!sellerUrl) continue;
 
-            if (seller.name && seller.name.toLowerCase().includes("flipkart")) {
+            if (seller.name.toLowerCase().includes("flipkart")) {
                 console.log("\n[FLIPKART LINK DEBUG]");
                 console.log(`seller.name: ${seller.name}`);
                 console.log(`seller.direct_link: ${seller.direct_link}`);
@@ -205,15 +215,14 @@ export class SerpApiGoogleShoppingProvider implements BackendSearchProvider {
                 console.log("------------------------\n");
             }
             
-            // Reconstruct the item title from the query if not present
             validResults.push({
-              title: request.normalizedTitle || seller.name || "Unknown Merchant Offer",
+              title: seller.title || request.normalizedTitle || seller.name,
               price: sellerPrice,
               currency: "INR",
               image: seller.icon || "",
-              url: sellerUrl ?? "",
-              source: seller.name || "Unknown Marketplace",
-              marketplace: seller.name || "Unknown Marketplace",
+              url: sellerUrl,
+              source: seller.name,
+              marketplace: seller.name,
               marketplaceLogo: seller.icon,
               availability: seller.status || seller.condition,
               deliveryInfo: seller.delivery || undefined,
@@ -302,6 +311,136 @@ export class SerpApiGoogleShoppingProvider implements BackendSearchProvider {
       }
     }
 
+    // Perform automatic seller expansion if not already doing so
+    if (!request.useSellerExpansion && shoppingResults.length > 0) {
+      let bestCandidate: any = null;
+      let bestScore = -1;
+
+      for (const item of shoppingResults) {
+        if (!item.title) continue;
+
+        const price = item.extracted_price ?? parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+        if (isNaN(price) || price <= 0) continue;
+
+        const realUrl = this.extractDirectMerchantUrl(item.link, item.direct_link);
+        if (!realUrl) continue;
+
+        const hasProductId = Boolean(item.product_id);
+        const hasImmersiveToken = Boolean(item.immersive_product_page_token);
+        
+        if (!hasProductId && !hasImmersiveToken) continue;
+
+        // Identity verification
+        const cleanTitle = cleanString(item.title);
+        const brandClean = request.brand ? cleanString(request.brand) : "";
+        const modelClean = request.model ? cleanString(request.model) : "";
+
+        const brandMatched = !brandClean || cleanTitle.includes(brandClean);
+        const modelMatched = !modelClean || cleanTitle.includes(modelClean);
+
+        if (!brandMatched || !modelMatched) continue;
+
+        let score = scoreIdentityMatch(item.title, request.brand, request.model);
+        if (hasProductId) score += 5;
+        if (hasImmersiveToken) score += 5;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidate = {
+            productId: item.product_id,
+            immersiveToken: item.immersive_product_page_token
+          };
+        }
+      }
+
+      if (bestCandidate) {
+        console.log(`[SerpApi] Triggering automatic seller expansion for Product ID: ${bestCandidate.productId || 'none'}, Token: ${bestCandidate.immersiveToken || 'none'}`);
+        try {
+          const expansionResult = await this.search({
+            ...request,
+            googleProductId: bestCandidate.productId,
+            googleImmersiveToken: bestCandidate.immersiveToken,
+            useSellerExpansion: true
+          });
+          
+          validResults.push(...expansionResult);
+          console.log(`[SerpApi] Expansion completed: added ${expansionResult.length} seller offers.`);
+        } catch (expansionError) {
+          console.error("[SerpApi] Automatic seller expansion failed, fallback to normal results:", expansionError);
+        }
+      }
+    }
+
     return validResults;
   }
+}
+
+// Helpers for merchant normalization and classification
+function cleanString(str: string | null | undefined): string {
+  if (!str) return "";
+  return str.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+}
+
+function scoreIdentityMatch(
+  title: string,
+  brand: string | null | undefined,
+  model: string | null | undefined
+): number {
+  const cleanTitle = cleanString(title);
+  if (!cleanTitle) return 0;
+  
+  let score = 0;
+  if (brand) {
+    const cleanBrand = cleanString(brand);
+    if (cleanBrand && cleanTitle.includes(cleanBrand)) {
+      score += 10;
+    }
+  }
+  if (model) {
+    const cleanModel = cleanString(model);
+    if (cleanModel && cleanTitle.includes(cleanModel)) {
+      score += 20;
+    }
+  }
+  return score;
+}
+
+export function normalizeMerchantName(name: string | null | undefined): string {
+  if (!name) return "";
+  const lower = name.toLowerCase().trim();
+  if (lower.startsWith("amazon")) return "amazon";
+  if (lower.startsWith("reliance digital")) return "reliance digital";
+  if (lower.startsWith("vijay sales")) return "vijay sales";
+  if (lower.startsWith("flipkart")) return "flipkart";
+  if (lower.startsWith("croma")) return "croma";
+  if (lower.startsWith("tata cliq") || lower.startsWith("tatacliq")) return "tata cliq";
+  return lower;
+}
+
+export type MerchantClass = "manufacturer" | "trusted_retailer" | "unknown";
+
+export function classifyMerchant(name: string | null | undefined): MerchantClass {
+  if (!name) return "unknown";
+  
+  const norm = normalizeMerchantName(name);
+
+  const manufacturers = [
+    "samsung", "apple", "google", "oneplus", "xiaomi", "nothing",
+    "motorola", "sony", "lg", "realme", "oppo", "vivo"
+  ];
+  
+  const retailers = [
+    "amazon", "flipkart", "reliance digital", "croma", "vijay sales",
+    "tata cliq", "myntra", "zepto", "blinkit", "bigbasket", "myg"
+  ];
+
+  if (manufacturers.some(m => norm.includes(m) || m.includes(norm))) {
+    return "manufacturer";
+  }
+
+  if (retailers.some(r => norm.includes(r) || r.includes(norm))) {
+    return "trusted_retailer";
+  }
+
+  return "unknown";
 }

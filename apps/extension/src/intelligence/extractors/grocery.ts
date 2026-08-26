@@ -1,79 +1,88 @@
-// @ts-nocheck
 import { type ProductAttributes, createEmptyAttributes } from "../attributes";
 
-const GROCERY_VARIANTS = new Set([
-  "tea",
-  "coffee",
-  "rice",
-  "milk",
-  "juice",
-  "biscuits",
-  "chips",
-  "chocolate"
-]);
-
-const GROCERY_SIZE_PATTERN = /^\d+(g|kg|ml|l)$/i;
-const PACK_X_PATTERN = /^x(\d+)$/i;
-const PACK_OF_NUM_PATTERN = /^packof(\d+)$/i;
+const GROCERY_FLAVORS: Record<string, string> = {
+  "magic masala": "Magic Masala",
+  masala: "Masala",
+  classic: "Classic",
+  salted: "Salted",
+  "cream & onion": "Cream & Onion",
+  "sour cream": "Sour Cream",
+  chocolate: "Chocolate",
+  vanilla: "Vanilla",
+  strawberry: "Strawberry",
+  mango: "Mango",
+  original: "Original"
+};
 
 /**
- * Grocery Attribute Extractor V1.
- * Detects weight/volume (stored in size) and pack count/grocery type (stored in variant).
+ * Grocery Attribute Extractor V2.
+ * Extracts standardized weight/volume, pack count, flavor, and sugar formulation.
  */
 export function extractGroceryAttributes(tokens: string[]): ProductAttributes {
   if (!tokens || tokens.length === 0) {
     return createEmptyAttributes();
   }
 
+  const text = tokens.join(" ");
+  const lowerText = text.toLowerCase();
+
   let size: string | null = null;
-  let itemVariant: string | null = null;
+  let weight: string | null = null;
+  let volume: string | null = null;
   let packCountStr: string | null = null;
+  let flavor: string | null = null;
+  let formulation: string | null = null;
 
-  for (let i = 0; i < tokens.length; i++) {
-    const lower = tokens[i].toLowerCase();
+  // 1. Weight / Volume extraction (e.g. 500g, 1kg, 2l, 500ml, 250g)
+  const weightMatch = lowerText.match(/\b(\d+(?:\.\d+)?)\s*(g|kg)\b/i);
+  if (weightMatch) {
+    weight = `${weightMatch[1]}${weightMatch[2].toLowerCase()}`;
+    size = weight;
+  }
 
-    // 1. Weight / Volume -> size
-    if (!size) {
-      const match = lower.match(GROCERY_SIZE_PATTERN);
-      if (match) {
-        const qty = parseFloat(match[1] || "0");
-        const unit = match[2]?.toLowerCase() || "";
-        size = `${qty}${unit}`;
-      }
+  const volMatch = lowerText.match(/\b(\d+(?:\.\d+)?)\s*(ml|l)\b/i);
+  if (volMatch && !weight) {
+    volume = `${volMatch[1]}${volMatch[2].toLowerCase()}`;
+    size = volume;
+  }
+
+  // 2. Pack Count detection (e.g. Pack of 6, 6 x 500ml, x6, pack of 2)
+  const packMatch =
+    lowerText.match(/\bpack\s*of\s*(\d+)\b/i) ||
+    lowerText.match(/\b(\d+)\s*x\s*\d+\s*(?:g|kg|ml|l)\b/i) ||
+    lowerText.match(/\bx(\d+)\b/i);
+
+  if (packMatch && packMatch[1] !== "1") {
+    packCountStr = `pack of ${packMatch[1]}`;
+  }
+
+  // 3. Flavor extraction
+  for (const [key, name] of Object.entries(GROCERY_FLAVORS)) {
+    if (lowerText.includes(key)) {
+      flavor = name;
+      break;
     }
+  }
 
-    // 2. Grocery Item Variant
-    if (!itemVariant && GROCERY_VARIANTS.has(lower)) {
-      itemVariant = lower;
-    }
-
-    // 3. Pack Count detection (e.g. x2, x3, packof2, pack of 2)
-    if (!packCountStr) {
-      const xMatch = lower.match(PACK_X_PATTERN);
-      if (xMatch) {
-        packCountStr = `pack of ${xMatch[1] || "1"}`;
-      } else {
-        const packOfMatch = lower.match(PACK_OF_NUM_PATTERN);
-        if (packOfMatch) {
-          packCountStr = `pack of ${packOfMatch[1] || "1"}`;
-        } else if (lower === "packof" && i < tokens.length - 1 && /^\d+$/.test(tokens[i + 1])) {
-          packCountStr = `pack of ${tokens[i + 1]}`;
-        } else if (lower === "pack") {
-          if (i < tokens.length - 2 && tokens[i + 1].toLowerCase() === "of" && /^\d+$/.test(tokens[i + 2])) {
-            packCountStr = `pack of ${tokens[i + 2]}`;
-          } else if (i < tokens.length - 1 && /^\d+$/.test(tokens[i + 1])) {
-            packCountStr = `pack of ${tokens[i + 1]}`;
-          }
-        }
-      }
-    }
+  // 4. Formulation / Sugar tag extraction (Zero Sugar, Sugar Free, Diet, Regular)
+  if (lowerText.includes("zero sugar") || lowerText.includes("no sugar")) {
+    formulation = "Zero Sugar";
+  } else if (lowerText.includes("sugar free") || lowerText.includes("sugar-free")) {
+    formulation = "Sugar Free";
+  } else if (lowerText.includes("diet")) {
+    formulation = "Diet";
+  } else if (lowerText.includes("regular")) {
+    formulation = "Regular";
   }
 
   return {
     ...createEmptyAttributes(),
     size,
-    variant: itemVariant,
-    packCount: packCountStr
+    weight,
+    volume,
+    packCount: packCountStr,
+    flavor,
+    formulation,
+    variant: flavor || formulation || packCountStr || null
   };
 }
-

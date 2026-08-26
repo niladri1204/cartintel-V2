@@ -74,6 +74,10 @@ export function normalizeMarketplaceName(
       const parsed = new URL(targetUrl);
       const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
 
+      if (host.includes("store.google.")) {
+        return "Google Store";
+      }
+
       for (const [key, val] of Object.entries(KNOWN_MARKETPLACES)) {
         if (!key.includes(" ") && host.includes(key)) {
           return val;
@@ -91,11 +95,15 @@ export function normalizeMarketplaceName(
     }
   }
 
-  // 2. Try clean source string if provided and NOT Google
+  // 2. Try clean source string if provided and NOT generic Google Shopping
   if (source && source.trim().length > 0) {
+    const lower = source.toLowerCase().trim();
+    if (lower === "google store" || lower.includes("google store")) {
+      return "Google Store";
+    }
     const formatted = formatMarketplaceString(source);
-    const lower = formatted.toLowerCase();
-    if (!lower.includes("google") && lower !== "google shopping") {
+    const formattedLower = formatted.toLowerCase();
+    if (!formattedLower.includes("google") && formattedLower !== "google shopping") {
       return formatted;
     }
   }

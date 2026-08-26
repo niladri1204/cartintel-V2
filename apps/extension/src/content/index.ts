@@ -1,5 +1,6 @@
 import { detectProduct } from './detector';
 import { processProduct } from '../intelligence';
+import { discoverProductsFromPage } from '../intelligence/visual/discovery';
 
 function init() {
   const result = detectProduct();
@@ -63,6 +64,32 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === 'force_detect') {
     init();
     sendResponse({ status: 'started' });
+    return;
+  }
+
+  if (request.action === 'run_visual_discovery') {
+    console.log("[Visual] page analysis started");
+    discoverProductsFromPage(document, {
+      existingProductContext: request.existingProductContext
+    }).then((result) => {
+      console.log("[VisualTrace] content script result:", result.status, result.matchStatus);
+      sendResponse(result);
+    }).catch((err) => {
+      console.error("Visual discovery failed:", err);
+      sendResponse({
+        status: "failed",
+        recognition: null,
+        searchAttributes: null,
+        generatedQueries: [],
+        discoveredCandidates: [],
+        matchStatus: "no_reliable_match",
+        matchedProducts: [],
+        similarProducts: [],
+        alternativeProducts: [],
+        message: String(err)
+      });
+    });
+    return true; // Keep channel open for async response
   }
 });
 

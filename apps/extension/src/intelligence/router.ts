@@ -33,19 +33,42 @@ export function routeCategory(category: string | null): ProductCategoryType {
   ) {
     return ProductCategoryType.Electronics;
   }
-  if (normalized.includes("fashion")) {
+  if (
+    normalized.includes("fashion") ||
+    normalized.includes("clothing") ||
+    normalized.includes("apparel") ||
+    normalized.includes("footwear")
+  ) {
     return ProductCategoryType.Fashion;
   }
-  if (normalized.includes("beauty")) {
+  if (
+    normalized.includes("beauty") ||
+    normalized.includes("cosmetic") ||
+    normalized.includes("skincare") ||
+    normalized.includes("personal care")
+  ) {
     return ProductCategoryType.Beauty;
   }
-  if (normalized.includes("grocery")) {
+  if (
+    normalized.includes("grocery") ||
+    normalized.includes("food") ||
+    normalized.includes("snack") ||
+    normalized.includes("beverage")
+  ) {
     return ProductCategoryType.Grocery;
   }
-  if (normalized.includes("furniture")) {
+  if (
+    normalized.includes("furniture") ||
+    normalized.includes("home") ||
+    normalized.includes("living")
+  ) {
     return ProductCategoryType.Furniture;
   }
-  if (normalized.includes("book")) {
+  if (
+    normalized.includes("book") ||
+    normalized.includes("media") ||
+    normalized.includes("publication")
+  ) {
     return ProductCategoryType.Books;
   }
 

@@ -104,6 +104,8 @@ export interface OfferDecisionResult {
   bestOffer: RecommendationCandidate | null;
   cheapestOffer: RecommendationCandidate | null;
   bestValueOffer: RecommendationCandidate | null;
+  allEligibleOffers?: RecommendationCandidate[];
+  allOffers?: RecommendationCandidate[];
   eligibleOfferCount: number;
   evaluatedOfferCount: number;
 }

@@ -1,4 +1,4 @@
-import type { RecommendationRequest, IntentConflict, HardConstraint, ExplicitRequirement, UserPreference } from "../recommendationTypes";
+import type { RecommendationRequest, IntentConflict } from "../recommendationTypes";
 
 /**
  * Parses numeric value from a string or number (e.g., 50000, "50000", "256GB" -> 256, "1TB" -> 1024).

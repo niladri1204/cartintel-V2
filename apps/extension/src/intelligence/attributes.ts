@@ -49,6 +49,15 @@ export interface ProductAttributes {
   regionVersion: string | null;
   warranty: string | null;
   variantSignature: string | null;
+  style: string | null;
+
+  // Phase 4.4.2 Beauty & Grocery Attributes
+  spf: string | null;
+  ingredient: string | null;
+  formulation: string | null;
+  shade: string | null;
+  skinType: string | null;
+  flavor: string | null;
 }
 
 export function createEmptyAttributes(): ProductAttributes {
@@ -58,6 +67,7 @@ export function createEmptyAttributes(): ProductAttributes {
     color: null,
     size: null,
     variant: null,
+    style: null,
     material: null,
     dimensions: null,
     weight: null,
@@ -90,7 +100,14 @@ export function createEmptyAttributes(): ProductAttributes {
     generation: null,
     regionVersion: null,
     warranty: null,
-    variantSignature: null
+    variantSignature: null,
+
+    spf: null,
+    ingredient: null,
+    formulation: null,
+    shade: null,
+    skinType: null,
+    flavor: null
   };
 }
 
@@ -118,4 +135,18 @@ export function extractAttributes(tokens: string[], category?: string | null): P
     default:
       return extractUnknownAttributes(tokens);
   }
+}
+
+/**
+ * Universal Category Attribute Extraction Dispatcher.
+ * Accepts either tokens array or string title, routing category to the dedicated category extractor.
+ */
+export function extractCategoryAttributes(
+  titleOrTokens: string | string[],
+  category?: string | null
+): ProductAttributes {
+  const tokens = Array.isArray(titleOrTokens)
+    ? titleOrTokens
+    : titleOrTokens.toLowerCase().split(/\s+/).filter(Boolean);
+  return extractAttributes(tokens, category);
 }

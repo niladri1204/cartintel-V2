@@ -14,8 +14,9 @@ export interface ProductCluster {
 function addProductToCluster(cluster: ProductCluster, product: ProductIntelligence) {
   cluster.products.push(product);
   cluster.productCount = cluster.products.length;
-  if (!cluster.marketplaces.includes(product.metadata.marketplace)) {
-    cluster.marketplaces.push(product.metadata.marketplace);
+  const mkt = product.metadata?.marketplace || "";
+  if (mkt && !cluster.marketplaces.includes(mkt)) {
+    cluster.marketplaces.push(mkt);
   }
   cluster.marketplaceCount = cluster.marketplaces.length;
 }
@@ -54,7 +55,10 @@ export function resolveProducts(
         const representative = cluster.products[0];
         const matchResult = compareProducts(product, representative);
         
-        if (matchResult.isMatch) {
+        const isVariantMismatch =
+          !matchResult.isMatch && matchResult.decision === "Likely Match";
+
+        if (matchResult.isMatch || isVariantMismatch) {
           addProductToCluster(cluster, product);
           if (cluster.reason === "Single Product" || matchResult.confidence > cluster.confidence) {
             cluster.confidence = matchResult.confidence;

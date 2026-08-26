@@ -1,6 +1,7 @@
 import { normalizeString } from "./normalizer";
 import { tokenize } from "./tokenizer";
 import { inferCategoryAndType } from "./category";
+import { inferDomain } from "./domain";
 import { extractQuantity } from "./quantity";
 
 import { extractBrand } from "./brand";
@@ -11,6 +12,7 @@ import { generateVariantSignature } from "./variant";
 export interface ParsedProduct {
   normalizedTitle: string | null;
   tokens: string[];
+  domain: string | null;
   category: string | null;
   brand: string | null;
   quantity: number | null;
@@ -23,6 +25,11 @@ export interface ParsedProduct {
   model: string | null;
   size: string | null;
   material: string | null;
+  dimensions: string | null;
+  author: string | null;
+  publisher: string | null;
+  isbn: string | null;
+  format: string | null;
   gender: string | null;
   storage: string | null;
   ram: string | null;
@@ -50,6 +57,16 @@ export interface ParsedProduct {
   regionVersion: string | null;
   warranty: string | null;
 
+  // Phase 4.4.2 Beauty & Grocery Attributes
+  volume: string | null;
+  weight: string | null;
+  shade: string | null;
+  formulation: string | null;
+  ingredient: string | null;
+  flavor: string | null;
+  spf: string | null;
+  skinType: string | null;
+
   // Phase 2.2 Variant Intelligence
   variantSignature: string | null;
 }
@@ -70,6 +87,7 @@ export function parseProductTitle(originalTitle: string | null): ParsedProduct {
   const result: ParsedProduct = {
     normalizedTitle,
     tokens,
+    domain: inferDomain(categoryInfo.category, normalizedTitle),
     category: categoryInfo.category,
     brand,
     ...quantityInfo,
@@ -80,12 +98,25 @@ export function parseProductTitle(originalTitle: string | null): ParsedProduct {
     model: extractModel(originalTitle, normalizedTitle, tokens, brand, attributesInfo),
     size: attributesInfo.size,
     material: attributesInfo.material,
+    dimensions: attributesInfo.dimensions,
+    author: attributesInfo.author,
+    publisher: attributesInfo.publisher,
+    isbn: attributesInfo.isbn,
+    format: attributesInfo.format,
     gender: attributesInfo.gender,
     storage: attributesInfo.storage,
     ram: attributesInfo.ram,
     packCount: attributesInfo.packCount ? parseInt(attributesInfo.packCount, 10) || null : null,
     language: attributesInfo.language,
     edition: attributesInfo.edition,
+    volume: attributesInfo.volume,
+    weight: attributesInfo.weight,
+    shade: attributesInfo.shade,
+    formulation: attributesInfo.formulation,
+    ingredient: attributesInfo.ingredient,
+    flavor: attributesInfo.flavor,
+    spf: attributesInfo.spf,
+    skinType: attributesInfo.skinType,
     attributes: [],
 
     processor: attributesInfo.processor,

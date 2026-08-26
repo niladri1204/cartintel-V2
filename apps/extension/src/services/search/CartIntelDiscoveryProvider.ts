@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type {
   SearchProvider,
   SearchRequest,
@@ -28,6 +29,12 @@ export class CartIntelDiscoveryProvider implements SearchProvider {
       const payload = {
         normalizedTitle: request.query.query,
         fingerprint: `query:${request.query.query}`,
+        googleProductId: (request as any).googleProductId,
+        googleImmersiveToken: (request as any).googleImmersiveToken,
+        useSellerExpansion: (request as any).useSellerExpansion,
+        searchContext: {
+          query: request.query.query,
+        },
       };
 
       const response = await fetch(endpoint, {
@@ -79,6 +86,19 @@ export class CartIntelDiscoveryProvider implements SearchProvider {
           .join(" | ");
       }
 
+      // Boundary B URL Trace
+      for (const result of data.results) {
+        if (result.url) {
+          let host = "none";
+          try {
+            host = new URL(result.url).hostname;
+          } catch {}
+          console.log(
+            `[URLTrace:ExtensionReceive] merchant=${result.source} hasUrl=${Boolean(result.url)} host=${host}`
+          );
+        }
+      }
+
       return {
         query: request.query,
         products: data.results,
@@ -95,6 +115,74 @@ export class CartIntelDiscoveryProvider implements SearchProvider {
         throw error;
       }
       throw new Error("Unknown backend communication error");
+    }
+  }
+
+  /**
+   * Enriches only the final decision-eligible offers with direct merchant URLs
+   * via a single targeted organic query on the backend.
+   */
+  async resolveMerchantUrls(
+    candidates: { product: any }[],
+    contextProduct: any
+  ): Promise<void> {
+    const rawOffers = candidates
+      .map(c => c.product)
+      .filter((p: any) => Boolean(p && !p.originalUrl));
+
+    if (rawOffers.length === 0) return;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    try {
+      const payload = {
+        normalizedTitle: contextProduct.normalizedTitle || contextProduct.originalTitle || "",
+        brand: contextProduct.brand || undefined,
+        model: contextProduct.model || undefined,
+        storage: contextProduct.storage || undefined,
+        ram: contextProduct.ram || undefined,
+        offers: rawOffers.map((p: any) => ({
+          title: p.originalTitle || p.normalizedTitle || "",
+          source: p.metadata?.marketplace || p.source || "unknown",
+          marketplace: p.metadata?.marketplace || p.source || "unknown",
+          price: p.originalPrice || 0,
+          currency: p.originalCurrency || "INR",
+          url: p.originalUrl || "",
+        })),
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/search/resolve-urls`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.resolvedOffers)) {
+          for (const resolved of data.resolvedOffers) {
+            if (resolved.url) {
+              const matchedCand = candidates.find(
+                c =>
+                  c.product &&
+                  (c.product.metadata?.marketplace === resolved.source ||
+                    c.product.source === resolved.source) &&
+                  (c.product.originalPrice === resolved.price || !c.product.originalPrice)
+              );
+              if (matchedCand && matchedCand.product && !matchedCand.product.originalUrl) {
+                matchedCand.product.originalUrl = resolved.url;
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      console.warn("[CartIntelDiscoveryProvider] Direct URL enrichment failed gracefully:", err);
     }
   }
 }

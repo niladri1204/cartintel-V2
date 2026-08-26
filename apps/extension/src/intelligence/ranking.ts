@@ -431,7 +431,7 @@ export function calculateIdentityConfidence(
   let matchState: IdentityMatchState = "high_confidence";
   let explanation = "High confidence identity match.";
 
-  if (score >= 95 || (hasModelMatch && matchedFields.includes("storage") && matchedFields.includes("ram"))) {
+  if ((score >= 95 && missingVariantFields.length === 0) || (hasModelMatch && matchedFields.includes("storage") && matchedFields.includes("ram"))) {
     matchState = "exact_identity";
     explanation = "Exact identity match across model and variant attributes.";
   } else if (score >= 80) {
@@ -823,7 +823,7 @@ export function calculateDuplicateRedundancy(
 
   let explanation = "Identical product identity offer.";
   if (isMultiMerchantDuplicate) {
-    explanation = `Identical product identity offer across merchants (${currentProduct.metadata.marketplace} vs ${candidate.metadata.marketplace}).`;
+    explanation = `Identical product identity offer across merchants (${currentProduct.metadata?.marketplace || "Store"} vs ${candidate.metadata?.marketplace || "Store"}).`;
   }
 
   return {
@@ -1081,11 +1081,32 @@ export function evaluateVariantState(
 }
 
 /**
- * Checks if a product title indicates refurbished / pre-owned / used status.
+ * Checks if a product title or merchant indicates refurbished / pre-owned / used status.
  */
-export function isRefurbishedOrUsedProduct(title: string | null | undefined): boolean {
-  if (!title) return false;
-  return /\b(?:refurbished|pre-owned|renewed|used|unboxed|open\s*box)\b/i.test(title);
+export function isRefurbishedOrUsedProduct(
+  title: string | null | undefined,
+  merchant?: string
+): boolean {
+  const t = (title || "").toLowerCase();
+  if (
+    /\b(?:refurbished|pre-owned|preowned|renewed|used|unboxed|open\s*box|second\s*hand|like\s*new|refurb)\b/i.test(
+      t
+    )
+  ) {
+    return true;
+  }
+  const m = (merchant || "").toLowerCase();
+  if (
+    m.includes("ovantica") ||
+    m.includes("cashify") ||
+    m.includes("controlz") ||
+    m.includes("sahivalue") ||
+    m.includes("2gud") ||
+    m.includes("refurbhub")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -1223,6 +1244,16 @@ export function selectBestListing(
 
   const selectedOffer = sortedFinalPool[0];
 
+  if (selectedOffer && selectedOffer.variantState === "missing_unknown") {
+    return {
+      selectedOffer: null,
+      selectionTier: "no_actionable_offer",
+      selectionReason: "Candidate offer has unverified variant details.",
+      isFallbackRequired: true,
+      consideredOfferCount: offers.length
+    };
+  }
+
   // Determine selection tier & explanation
   let selectionTier: BestListingSelectionTier = "compatible_available";
   let isFallbackRequired = false;
@@ -1294,7 +1325,7 @@ export function rankDeals(identity: ProductIdentity): RankedDealResult {
   // Deduplicate candidates to prevent duplicate Shopsy/Flipkart copies
   const uniqueCandidates = new Map<string, ProductIntelligence>();
   for (const c of rawCandidates) {
-    const merchant = c.metadata.marketplace.toLowerCase();
+    const merchant = (c.metadata?.marketplace || "").toLowerCase();
     const priceStr = c.originalPrice !== null ? c.originalPrice.toString() : "null";
     const vs = evaluateVariantState(currentProduct, c);
     const key = `${merchant}-${priceStr}-${vs}`;
@@ -1414,8 +1445,6 @@ export function rankDeals(identity: ProductIdentity): RankedDealResult {
       rejectionReason = "Refurbished/used offer excluded for new product";
     } else if (variantState === "explicitly_conflicting") {
       rejectionReason = "Variant mismatch (RAM/Storage differs)";
-    } else if (variantState === "missing_unknown") {
-      rejectionReason = "Unverified variant details";
     }
 
     offers.push({

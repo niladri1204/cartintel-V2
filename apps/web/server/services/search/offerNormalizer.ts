@@ -25,7 +25,7 @@ export class OfferNormalizer {
         offer.price
       );
 
-    const originalPrice =
+    const originalPrice: number | null =
       null;
 
     const discount =

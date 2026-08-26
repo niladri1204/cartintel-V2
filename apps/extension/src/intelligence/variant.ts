@@ -78,14 +78,34 @@ export function generateVariantSignature(product: ProductIntelligence): string {
     { key: "wirelessStandards", val: product.wirelessStandards },
     { key: "generation", val: product.generation },
     { key: "regionVersion", val: product.regionVersion },
-    { key: "warranty", val: product.warranty }
+    { key: "warranty", val: product.warranty },
+
+    // Phase 4.4.2 Beauty & Grocery Dimensions
+    { key: "volume", val: product.volume },
+    { key: "weight", val: product.weight },
+    { key: "packCount", val: product.packCount },
+    { key: "shade", val: product.shade },
+    { key: "formulation", val: product.formulation },
+    { key: "ingredient", val: product.ingredient },
+    { key: "flavor", val: product.flavor },
+    { key: "spf", val: product.spf },
+    { key: "skinType", val: product.skinType },
+
+    // Phase 4.4.3 Furniture & Books Dimensions
+    { key: "dimensions", val: product.dimensions },
+    { key: "author", val: product.author },
+    { key: "publisher", val: product.publisher },
+    { key: "isbn", val: product.isbn },
+    { key: "language", val: product.language },
+    { key: "format", val: product.format },
+    { key: "edition", val: product.edition }
   ];
 
   const parts: string[] = [];
 
   for (const dim of dimensions) {
-    if (dim.val) {
-      parts.push(cleanSpecForComparison(dim.key, dim.val));
+    if (dim.val !== null && dim.val !== undefined && dim.val !== "") {
+      parts.push(cleanSpecForComparison(dim.key, String(dim.val)));
     }
   }
 

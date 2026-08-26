@@ -127,4 +127,7 @@ export interface RecommendationResult {
   bestOffer?: RecommendationCandidate | null;
   cheapestOffer?: RecommendationCandidate | null;
   bestValueOffer?: RecommendationCandidate | null;
+  allEligibleOffers?: RecommendationCandidate[];
+  allOffers?: RecommendationCandidate[];
+  offers?: RecommendationCandidate[];
 }

@@ -203,7 +203,11 @@ export function selectBestRecommendation(
     const eligScoreComp = eligibility === "eligible" ? 1.0 : 0.5;
 
     // Decision utility weights: Requirement 30%, Price/Value 25%, Ranking 25%, Preference 20%
+    // For Electronics: Requirements 30%, Value 35%, Ranking 15%, Preference 20%
     let rawScore = 0.30 * reqScore + 0.25 * valScore + 0.25 * rankScore + 0.20 * prefScore;
+    if (candidate.product?.category === "Electronics") {
+      rawScore = 0.30 * reqScore + 0.35 * valScore + 0.15 * rankScore + 0.20 * prefScore;
+    }
 
     // If eligibility is unknown (missing required hard constraint data), apply uncertainty discount factor (0.7x)
     if (eligibility === "unknown") {

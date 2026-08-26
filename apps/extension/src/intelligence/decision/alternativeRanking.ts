@@ -40,7 +40,7 @@ export function rankAlternativeProducts(
 
   if (alternatives !== undefined) {
     candidateAlternatives = alternatives;
-    const prodRes = evaluateProductLevelDecisions(request, request?.candidates);
+    const prodRes = evaluateProductLevelDecisions(request, request?.candidates || undefined);
     recommendedProduct = prodRes.bestProductGroup;
   } else {
     const altResult = identifyAlternativeProducts(request);

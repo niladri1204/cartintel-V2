@@ -11,6 +11,7 @@ export interface SearchRequest {
   fingerprint: string;
   googleProductId?: string;
   googleImmersiveToken?: string;
+  useSellerExpansion?: boolean;
 }
 
 export interface RawProductResult {

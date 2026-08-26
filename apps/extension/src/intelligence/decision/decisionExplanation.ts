@@ -434,6 +434,9 @@ export function buildExplainableRecommendation(
     productOfferDetails,
     bestOffer: offerDecision.bestOffer,
     cheapestOffer: offerDecision.cheapestOffer,
-    bestValueOffer: offerDecision.bestValueOffer
+    bestValueOffer: offerDecision.bestValueOffer,
+    allEligibleOffers: offerDecision.allEligibleOffers || [],
+    allOffers: offerDecision.allEligibleOffers || [],
+    offers: offerDecision.allEligibleOffers || []
   };
 }

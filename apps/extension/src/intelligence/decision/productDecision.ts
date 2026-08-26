@@ -78,11 +78,15 @@ export function evaluateProductLevelDecisions(
   const evalResult = evaluateDecisionInputs(req, candList);
   const candidateEvalMap = new Map(evalResult.evaluations.map(e => [e.candidate, e]));
 
-  // Group candidates by fingerprint
+  // Group candidates by canonical product key (brand + model + storage)
   const groupsMap = new Map<string, RecommendationCandidate[]>();
 
   for (const candidate of candList) {
-    const fp = candidate.product?.fingerprint || candidate.product?.normalizedTitle || "unknown_product";
+    const p = candidate.product;
+    const fp = p?.fingerprint || (p?.brand && p?.model
+      ? `${p.brand.toLowerCase().trim()}|${p.model.toLowerCase().trim()}`
+      : "unknown_product");
+
     if (!groupsMap.has(fp)) {
       groupsMap.set(fp, []);
     }
@@ -178,7 +182,7 @@ export function evaluateProductLevelDecisions(
     });
 
     productGroups.push({
-      fingerprint,
+      fingerprint: product.fingerprint || fingerprint,
       product,
       offers,
       bestIdentityConfidence,

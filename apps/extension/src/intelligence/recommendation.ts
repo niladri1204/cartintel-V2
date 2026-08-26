@@ -29,10 +29,10 @@ export function recommendDeal(rankedDeals: RankedDealResult): RecommendationResu
   // RULE 3: No external offers
   if (rankedDeals.offers.length === 0) {
     return {
-      state: "no_matching_offers",
+      state: "current_product_is_best_price",
       recommendedOffer: null,
       tiedOffers: [],
-      reason: "No matching marketplace offers were found.",
+      reason: "The current product is already the best price.",
       isPriceBased: true
     };
   }
@@ -51,6 +51,15 @@ export function recommendDeal(rankedDeals: RankedDealResult): RecommendationResu
   // RULE 1: If rankedDeals.bestOffer exists (cheaper, matching variant, valid offer)
   if (rankedDeals.bestOffer) {
     const bestPrice = rankedDeals.bestOffer.product.originalPrice;
+    if (rankedDeals.bestOffer.isCurrentProduct || (bestPrice !== null && currentPrice !== null && bestPrice > currentPrice)) {
+      return {
+        state: "current_product_is_best_price",
+        recommendedOffer: null,
+        tiedOffers: [],
+        reason: "The current product is already the best price.",
+        isPriceBased: true
+      };
+    }
     
     // Find tied offers sharing the exact same best price
     const tiedOffers = rankedDeals.offers.filter(offer => 
@@ -58,7 +67,7 @@ export function recommendDeal(rankedDeals: RankedDealResult): RecommendationResu
       offer.product.originalPrice === bestPrice
     );
 
-    tiedOffers.sort((a, b) => a.product.metadata.marketplace.localeCompare(b.product.metadata.marketplace));
+    tiedOffers.sort((a, b) => (a.product.metadata?.marketplace || "").localeCompare(b.product.metadata?.marketplace || ""));
 
     const savingsVal = rankedDeals.bestOffer.savingsValue ? Math.round(rankedDeals.bestOffer.savingsValue) : 0;
     const savingsPct = rankedDeals.bestOffer.savingsPercentage ? Math.round(rankedDeals.bestOffer.savingsPercentage) : 0;

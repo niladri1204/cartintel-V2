@@ -90,7 +90,7 @@ export function parseCharging(val: string | null | undefined): number | null {
   return parseInt(match[1], 10);
 }
 
-export function cleanCategoricalSpec(key: string, val: string | null | undefined): string | null {
+export function cleanCategoricalSpec(_key: string, val: string | null | undefined): string | null {
   if (!val) return null;
   let cleaned = val.trim().toLowerCase();
   

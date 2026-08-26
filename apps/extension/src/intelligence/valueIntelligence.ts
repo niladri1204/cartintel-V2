@@ -1,4 +1,4 @@
-import type { RecommendationRequest, RecommendationCandidate } from "../recommendationTypes";
+import type { RecommendationRequest, RecommendationCandidate, HardConstraint } from "./recommendationTypes";
 import { evaluateElectronicsRequirements } from "./electronicsRequirement";
 import { compareSpecValue } from "./specComparison";
 
@@ -76,7 +76,7 @@ export function evaluateElectronicsOfferValue(
 
   // 3. Hard constraints check (Phase 1)
   const hardConstraints = request.hardConstraints || [];
-  const hasHardViolation = hardConstraints.some(hc => {
+  const hasHardViolation = hardConstraints.some((hc: HardConstraint) => {
     // If any eligible condition/brand constraint is violated
     const normAttr = hc.attribute.toLowerCase().trim();
     if (normAttr === "condition") {
