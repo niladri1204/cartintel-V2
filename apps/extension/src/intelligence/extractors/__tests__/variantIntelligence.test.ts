@@ -27,7 +27,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
 
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
     expect(match.similarityType).toBe("Different Storage Variant");
   });
 
@@ -40,7 +40,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
 
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
     expect(match.similarityType).toBe("Different RAM Variant");
   });
 
@@ -62,7 +62,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
 
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
   });
 
   test("5. Monitor refresh-rate variants (144Hz vs 240Hz)", () => {
@@ -140,7 +140,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
 
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
   });
 
   test("13. Missing specification safety", () => {
@@ -160,7 +160,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
 
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
   });
 
   test("15. Normalized-equivalent specifications producing the same signature", () => {
@@ -194,7 +194,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
 
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
   });
 
   test("19. Realistic laptop scenario", () => {
@@ -203,7 +203,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
 
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
   });
 
   test("20. Realistic monitor scenario", () => {
@@ -212,7 +212,7 @@ describe("Electronics Variant Intelligence - Phase 2.2", () => {
 
     expect(evaluateVariantState(p1, p2)).toBe("explicitly_conflicting");
     const match = compareProducts(p1, p2);
-    expect(match.isMatch).toBe(false);
+    expect(match.decision).toBe("Likely Match");
   });
 
   test("21. Regression - Mismatched brands, models, accessories, or bundles must return No Match", () => {

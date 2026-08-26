@@ -2,6 +2,22 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { SerpApiGoogleShoppingProvider } from "../../../../../web/server/services/search/providers/SerpApiGoogleShoppingProvider";
 import type { SearchRequest } from "../../../../../web/server/services/search/types";
 
+function createSearchRequest(partial: Partial<SearchRequest>): SearchRequest {
+  return {
+    normalizedTitle: null,
+    brand: null,
+    model: null,
+    category: null,
+    productType: null,
+    variant: null,
+    color: null,
+    storage: null,
+    ram: null,
+    fingerprint: "test-fingerprint",
+    ...partial
+  };
+}
+
 describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
   let provider: SerpApiGoogleShoppingProvider;
   const originalEnv = process.env.SERPAPI_API_KEY;
@@ -37,12 +53,12 @@ describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
       })
     );
 
-    const req: SearchRequest = {
+    const req = createSearchRequest({
       fingerprint: "apple|iphone 16",
       brand: "Apple",
       model: "iPhone 16",
       storage: "128GB"
-    };
+    });
 
     const results = await provider.search(req);
     expect(results).toHaveLength(1);
@@ -77,11 +93,11 @@ describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
       )
     );
 
-    const req: SearchRequest = {
+    const req = createSearchRequest({
       fingerprint: "apple|iphone 16",
       brand: "Apple",
       model: "iPhone 16"
-    };
+    });
 
     const results = await provider.search(req);
     expect(results).toHaveLength(1);
@@ -114,11 +130,11 @@ describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
       })
     );
 
-    const req: SearchRequest = {
+    const req = createSearchRequest({
       fingerprint: "apple|iphone 16",
       brand: "Apple",
       model: "iPhone 16"
-    };
+    });
 
     const results = await provider.search(req);
     expect(fetchCount).toBe(2);
@@ -132,11 +148,11 @@ describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
       vi.fn().mockImplementation(() => Promise.reject(new Error("Connection refused")))
     );
 
-    const req: SearchRequest = {
+    const req = createSearchRequest({
       fingerprint: "apple|iphone 16",
       brand: "Apple",
       model: "iPhone 16"
-    };
+    });
 
     await expect(provider.search(req)).rejects.toThrow("Network failure or Timeout while contacting SerpApi");
   });
@@ -144,9 +160,9 @@ describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
   test("5. Missing API key throws explicit configuration error", async () => {
     delete process.env.SERPAPI_API_KEY;
 
-    const req: SearchRequest = {
+    const req = createSearchRequest({
       fingerprint: "apple|iphone 16"
-    };
+    });
 
     await expect(provider.search(req)).rejects.toThrow("Provider configuration error: Missing API Key");
   });
@@ -170,12 +186,12 @@ describe("SerpApiGoogleShoppingProvider - Timeout & Retry Resilience", () => {
       })
     );
 
-    const req: SearchRequest = {
+    const req = createSearchRequest({
       fingerprint: "apple|iphone 16 128gb",
       brand: "Apple",
       model: "iPhone 16",
       storage: "128GB"
-    };
+    });
 
     const results = await provider.search(req);
     expect(capturedUrl).toContain("engine=google_shopping");

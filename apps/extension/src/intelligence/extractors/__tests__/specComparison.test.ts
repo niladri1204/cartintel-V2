@@ -5,8 +5,6 @@ import {
   parseDisplaySize,
   parseResolution,
   parseRefreshRate,
-  parseBattery,
-  parseCharging,
   compareSpecValue
 } from "../../specComparison";
 import { processProduct } from "../../engine";

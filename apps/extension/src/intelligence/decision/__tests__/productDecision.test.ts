@@ -249,11 +249,13 @@ describe("productDecision - Phase 1.12.4.1 Product-Level Decision", () => {
   });
 
   test("12. Immutability (candidate & request objects unmutated)", () => {
-    const reqCopy = JSON.parse(JSON.stringify({ candidates: [offerSamsungAmazon] }));
+    const request = { candidates: [offerSamsungAmazon] };
+    const reqCopy = JSON.parse(JSON.stringify(request));
     const offerCopy = JSON.parse(JSON.stringify(offerSamsungAmazon));
 
-    evaluateProductLevelDecisions({ candidates: [offerSamsungAmazon] });
+    evaluateProductLevelDecisions(request);
 
+    expect(request).toEqual(reqCopy);
     expect(offerSamsungAmazon).toEqual(offerCopy);
   });
 

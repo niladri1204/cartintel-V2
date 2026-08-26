@@ -82,7 +82,7 @@ describe('Phase 1.10.7 Best Listing Selection Test Suite', () => {
 
     expect(ranked.bestOffer).toBeDefined();
     expect(ranked.bestOffer?.product.originalTitle).toBe(exactCandidate.originalTitle);
-    expect(ranked.bestOffer?.product.storage).toBe("256gb");
+    expect(ranked.bestOffer?.product.storage?.toLowerCase()).toBe("256gb");
   });
 
   test('4. Phone beats cheap phone-case candidate', () => {

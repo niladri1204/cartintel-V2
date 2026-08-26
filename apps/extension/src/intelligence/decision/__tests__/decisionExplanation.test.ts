@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { buildExplainableRecommendation } from "../decisionExplanation";
 import { buildRecommendationRequest } from "../../intent/recommendationRequestBuilder";
-import type { RecommendationCandidate, RecommendationRequest } from "../../recommendationTypes";
+import type { RecommendationCandidate } from "../../recommendationTypes";
 
 describe("decisionExplanation - Phase 1.12.3.3 Explainable Recommendation & End-to-End Validation", () => {
   const candidateSamsung: RecommendationCandidate = {

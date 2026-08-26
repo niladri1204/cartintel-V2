@@ -313,7 +313,7 @@ describe("uiPurchaseFlowValidation — Phase 1.12.7.3 Final Integration Validati
       normalizedQuery: "smartphone",
       candidates: [candidateAmazonS24, candidateFlipkartS24, candidateiPhone15]
     };
-    const productGroups = evaluateProductLevelDecisions(freshReq, freshReq.candidates).productGroups;
+    const productGroups = evaluateProductLevelDecisions(freshReq, freshReq.candidates || undefined).productGroups;
     const altResult = identifyAlternativeProducts(freshReq, productGroups);
     const rankedAlts = rankAlternativeProducts(freshReq, altResult.alternatives);
 

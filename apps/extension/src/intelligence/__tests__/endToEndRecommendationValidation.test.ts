@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { buildRecommendationRequest } from "../intent/recommendationRequestBuilder";
 import { buildExplainableRecommendation } from "../decision/decisionExplanation";
 import { generateFingerprint } from "../fingerprint";
-import type { RecommendationCandidate, RecommendationRequest, HardConstraint, ExplicitRequirement } from "../recommendationTypes";
+import type { RecommendationCandidate, ExplicitRequirement, HardConstraint } from "../recommendationTypes";
 
 describe("Phase 1.12.8: End-to-End Recommendation Validation", () => {
   // Helpers to generate candidates

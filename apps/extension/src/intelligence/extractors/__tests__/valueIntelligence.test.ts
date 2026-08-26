@@ -19,6 +19,10 @@ describe("Value-for-Money Intelligence - Phase 2.6", () => {
     const product = getProduct(title, price, currency);
     return {
       product,
+      isCurrentProduct: false,
+      isRefurbishedOrUsed: false,
+      isUnavailable: false,
+      currencyMismatch: false,
       marketplaceReliabilityScore: 80,
       qualityScore: 80,
       priceAvailabilityScore: 80,

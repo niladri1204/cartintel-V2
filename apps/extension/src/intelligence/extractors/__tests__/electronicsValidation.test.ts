@@ -28,6 +28,7 @@ describe("Final Electronics Intelligence Validation - Phase 2.8", () => {
     const product = getProduct(title, price, currency, prodOverrides);
     return {
       product,
+      isCurrentProduct: false,
       marketplaceReliabilityScore: 80,
       qualityScore: 80,
       priceAvailabilityScore: 80,

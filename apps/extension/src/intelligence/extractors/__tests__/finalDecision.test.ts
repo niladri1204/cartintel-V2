@@ -24,6 +24,10 @@ describe("Final Electronics Buying Decision - Phase 2.7", () => {
     const product = getProduct(title, price, currency);
     return {
       product,
+      isCurrentProduct: false,
+      isRefurbishedOrUsed: false,
+      isUnavailable: false,
+      currencyMismatch: false,
       marketplaceReliabilityScore: 80,
       qualityScore: 80,
       priceAvailabilityScore: 80,
