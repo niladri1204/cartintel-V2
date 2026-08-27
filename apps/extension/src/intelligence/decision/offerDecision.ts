@@ -105,15 +105,16 @@ export function evaluateOfferLevelDecisions(
 
   // Filter candidates belonging to the selected canonical offer family
   const pool = candidates || productGroup.offers;
-  const anchorOffer =
-    productGroup.offers[0] ||
-    pool[0] ||
+  const anchorProduct =
+    productGroup.product ||
+    productGroup.offers[0]?.product ||
+    pool[0]?.product ||
     null;
 
-  const productOffers = anchorOffer
+  const productOffers = anchorProduct
     ? pool.filter(candidate =>
         isSameCanonicalOfferFamily(
-          anchorOffer.product,
+          anchorProduct,
           candidate.product
         )
       )
@@ -175,8 +176,8 @@ export function evaluateOfferLevelDecisions(
         const pA = getNumericPrice(a)!;
         const pB = getNumericPrice(b)!;
         if (pA !== pB) return pA - pB;
-        const relA = a.marketplaceReliabilityScore || 0;
-        const relB = b.marketplaceReliabilityScore || 0;
+        const relA = a.marketplaceReliabilityScore ?? 35;
+        const relB = b.marketplaceReliabilityScore ?? 35;
         if (relB !== relA) return relB - relA;
         return (b.finalRankingScore || 0) - (a.finalRankingScore || 0);
       });
@@ -206,7 +207,7 @@ export function evaluateOfferLevelDecisions(
   // 2. Compute bestOffer using price-dominant scoring
   const scoredBestOffers = comparableOffers.map(candidate => {
     const priceScore = getRelativePriceScore(candidate);
-    const merchantScore = candidate.marketplaceReliabilityScore || 50;
+    const merchantScore = candidate.marketplaceReliabilityScore ?? 35;
     const rankingScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 50));
     const qualityScore = candidate.qualityScore || 50;
 
@@ -235,7 +236,7 @@ export function evaluateOfferLevelDecisions(
   // 3. Compute bestValueOffer (distinct from cheapestOffer: 60% quality/reputation + 40% price efficiency)
   const scoredValueOffers = comparableOffers.map(candidate => {
     const priceScore = getRelativePriceScore(candidate);
-    const merchantScore = candidate.marketplaceReliabilityScore || 50;
+    const merchantScore = candidate.marketplaceReliabilityScore ?? 35;
     const qualityScore = candidate.qualityScore || 50;
     const rankingScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 50));
 

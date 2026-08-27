@@ -16,7 +16,12 @@ export function toRecommendationCandidates(
     // Determine if this offer is the selected best offer
     const isSelectedBestOffer = 
       rankedDeals.bestListingDetails?.selectedOffer === offer ||
-      rankedDeals.bestOffer === offer;
+      rankedDeals.bestOffer === offer ||
+      (Boolean(rankedDeals.bestOffer?.product?.originalUrl) &&
+        rankedDeals.bestOffer?.product?.originalUrl === offer.product?.originalUrl) ||
+      (Boolean(rankedDeals.bestOffer?.product?.fingerprint) &&
+        rankedDeals.bestOffer?.product?.fingerprint === offer.product?.fingerprint &&
+        offer.product?.metadata?.marketplace === rankedDeals.bestOffer?.product?.metadata?.marketplace);
 
     const selectionTier = isSelectedBestOffer
       ? (rankedDeals.bestListingDetails?.selectionTier ?? null)

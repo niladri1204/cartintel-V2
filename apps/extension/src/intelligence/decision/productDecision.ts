@@ -83,9 +83,9 @@ export function evaluateProductLevelDecisions(
 
   for (const candidate of candList) {
     const p = candidate.product;
-    const fp = p?.fingerprint || (p?.brand && p?.model
-      ? `${p.brand.toLowerCase().trim()}|${p.model.toLowerCase().trim()}`
-      : "unknown_product");
+    const brandPart = p?.brand ? `${p.brand.toLowerCase().trim()}|` : "";
+    const modelPart = p?.model ? p.model.toLowerCase().trim() : (p?.normalizedTitle || p?.originalTitle || "unknown_product").toLowerCase().trim();
+    const fp = p?.fingerprint || `${brandPart}${modelPart}`;
 
     if (!groupsMap.has(fp)) {
       groupsMap.set(fp, []);

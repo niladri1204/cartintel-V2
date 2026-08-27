@@ -359,6 +359,7 @@ function areProductTypesCompatible(pt1: string, pt2: string): boolean {
   compareVariantField("ram", left.ram, right.ram, 5);
   compareVariantField("color", left.color, right.color, 5);
   compareVariantField("variant", left.variant, right.variant, 5);
+  compareVariantField("size", left.size, right.size, 5);
 
   // Beauty & Grocery Specific Variant Comparisons
   compareVariantField("volume", left.volume, right.volume, 5);
@@ -439,6 +440,8 @@ function areProductTypesCompatible(pt1: string, pt2: string): boolean {
     mismatchedFields.includes("storage") ||
     mismatchedFields.includes("ram") ||
     mismatchedFields.includes("color") ||
+    mismatchedFields.includes("variant") ||
+    mismatchedFields.includes("size") ||
     mismatchedFields.includes("volume") ||
     mismatchedFields.includes("weight") ||
     mismatchedFields.includes("packCount") ||

@@ -29,10 +29,10 @@ export function recommendDeal(rankedDeals: RankedDealResult): RecommendationResu
   // RULE 3: No external offers
   if (rankedDeals.offers.length === 0) {
     return {
-      state: "current_product_is_best_price",
+      state: "no_matching_offers",
       recommendedOffer: null,
       tiedOffers: [],
-      reason: "The current product is already the best price.",
+      reason: "No external merchant offers were found for comparison.",
       isPriceBased: true
     };
   }

@@ -40,7 +40,7 @@ export function identifyAlternativeProducts(
   const recProductType = (recommendedProduct.product.productType || "").toLowerCase().trim();
 
   const candidatesToEvaluate = allGroups.filter(g => {
-    if (g.fingerprint === recFingerprint || g.isEligible !== true) return false;
+    if (g.fingerprint === recFingerprint) return false;
 
     // Domain Boundary Isolation
     const groupDomain = g.product.domain || inferDomain(g.product.category, g.product.normalizedTitle);

@@ -518,7 +518,8 @@ export function calculateMarketplaceReliability(candidate: ProductIntelligence):
   }
 
   const lowerName = marketplaceName.toLowerCase();
-  const isUnusableSource = lowerName === "unknown seller/site" || lowerName === "google" || lowerName === "google shopping";
+  const isExplicitlyUnusable = lowerName === "google" || lowerName === "google shopping";
+  const isUnusableSource = isExplicitlyUnusable || lowerName === "unknown seller/site";
   const isRecognizedPlatform = !isUnusableSource && RECOGNIZED_PLATFORMS.has(lowerName);
 
   const isMarketplaceSpecified = Boolean(
@@ -530,8 +531,8 @@ export function calculateMarketplaceReliability(candidate: ProductIntelligence):
 
   const hasValidDomain = Boolean(domain && domain.trim().length > 0 && !domain.includes("google."));
 
-  // 1. Unusable / Unidentifiable Marketplace -> Score 0
-  if (isUnusableSource && !hasValidDomain) {
+  // 1. Explicitly Unusable / Google Search Redirect Marketplace -> Score 0
+  if (isExplicitlyUnusable && !hasValidDomain) {
     return {
       score: 0,
       reliabilityState: "unusable_marketplace",
@@ -581,9 +582,9 @@ export function calculateMarketplaceReliability(candidate: ProductIntelligence):
     };
   }
 
-  // 4. Missing Marketplace Details -> Score 40
+  // 4. Missing Marketplace Details -> Score 35
   return {
-    score: 40,
+    score: 35,
     reliabilityState: "missing_marketplace",
     marketplaceName,
     domain,
