@@ -15,6 +15,7 @@ function init() {
     );
     console.table({
       Title: result.title,
+      Brand: result.brand,
       Price: result.price !== null ? `${result.price} ${result.currency || ''}` : null,
       Image: result.image,
       URL: result.url,
@@ -25,6 +26,7 @@ function init() {
     try {
       const intelligence = processProduct({
         title: result.title,
+        brand: result.brand,
         price: result.price,
         currency: result.currency,
         image: result.image,

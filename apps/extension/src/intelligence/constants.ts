@@ -1,6 +1,11 @@
 // Constants for the Product Intelligence Engine
 
-export const BEAUTY_KEYWORDS = ["lipstick", "cream", "serum", "shampoo", "gel", "lotion", "perfume", "makeup"];
+export const BEAUTY_KEYWORDS = [
+  "lipstick", "lip balm", "lip gloss", "lip liner", "lip", "balm", "cream", "serum",
+  "shampoo", "gel", "lotion", "perfume", "makeup", "eyeliner", "kajal", "mascara",
+  "foundation", "concealer", "blush", "highlighter", "toner", "cleanser", "facewash",
+  "face wash", "moisturizer", "sunscreen", "deodorant", "fragrance", "hair oil", "conditioner"
+];
 export const FASHION_KEYWORDS = ["shirt", "shoe", "dress", "jeans", "t-shirt", "sneaker", "jacket", "pants"];
 export const ELECTRONICS_KEYWORDS = ["phone", "laptop", "earbuds", "headphones", "tv", "charger", "camera", "smartphone", "mobile", "iphone", "android", "pixel"];
 export const GROCERY_KEYWORDS = ["apple", "milk", "bread", "grocery", "rice", "dal", "coffee", "tea", "sugar"];

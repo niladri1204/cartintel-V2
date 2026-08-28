@@ -6,6 +6,7 @@ import {
   parseJsonLd, 
   extractFromJsonLd, 
   extractTitle, 
+  extractBrandFromPage,
   extractPrice, 
   extractCurrency, 
   extractImage 
@@ -18,6 +19,7 @@ export function detectProduct(): ProductDetectionResult {
   
   // 1. Specific Provider Extraction
   let providerTitle: string | null = null;
+  let providerBrand: string | null = null;
   let providerPrice: number | null = null;
   let providerCurrency: string | null = null;
   let providerImage: string | null = null;
@@ -26,6 +28,7 @@ export function detectProduct(): ProductDetectionResult {
     if (provider.matches(hostname)) {
       const data = provider.extract();
       providerTitle = data.title ?? null;
+      providerBrand = data.brand ?? null;
       providerPrice = data.price ?? null;
       providerCurrency = data.currency ?? null;
       providerImage = data.image ?? null;
@@ -39,6 +42,7 @@ export function detectProduct(): ProductDetectionResult {
 
   // 3 & 4. Merge results (Provider > Generic/Metadata/DOM fallback)
   const title = providerTitle ?? extractTitle(jsonLdProduct);
+  const brand = providerBrand ?? extractBrandFromPage(jsonLdProduct, url);
   const price = providerPrice ?? extractPrice(jsonLdProduct);
   const currency = providerCurrency ?? extractCurrency(jsonLdProduct);
   const image = providerImage ?? extractImage(jsonLdProduct);
@@ -55,6 +59,7 @@ export function detectProduct(): ProductDetectionResult {
   return {
     isProductPage,
     title,
+    brand,
     price,
     currency,
     image,

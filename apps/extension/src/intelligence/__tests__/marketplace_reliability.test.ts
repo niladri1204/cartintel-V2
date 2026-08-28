@@ -22,7 +22,11 @@ describe('Phase 1.10.3 Marketplace Reliability Signal Test Suite', () => {
       url,
       hostname
     });
-    base.metadata.marketplace = marketplace;
+    if (base.metadata) {
+      base.metadata.marketplace = marketplace;
+    } else {
+      base.metadata = { marketplace, hostname: hostname || "", detectedAt: Date.now() };
+    }
     return { ...base, ...overrides };
   };
 
@@ -61,7 +65,9 @@ describe('Phase 1.10.3 Marketplace Reliability Signal Test Suite', () => {
   test('4. Unusable / Unknown marketplace info yields score 0 and unusable_marketplace', () => {
     const candidate = getProduct("Samsung Galaxy S25 Plus", "Unknown seller/site", "");
     candidate.originalUrl = null;
-    candidate.metadata.hostname = "";
+    if (candidate.metadata) {
+      candidate.metadata.hostname = "";
+    }
     const rel = calculateMarketplaceReliability(candidate);
 
     expect(rel.score).toBe(0);

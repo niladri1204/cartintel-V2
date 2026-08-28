@@ -5,10 +5,18 @@ export type VisualRecognitionStatus =
   | "unknown"
   | "unavailable";
 
+export function normalizeVisualConfidence(val: number | null | undefined): number | null {
+  if (val == null || typeof val !== "number" || isNaN(val)) return null;
+  if (val <= 1.0 && val > 0) {
+    return Math.round(val * 100);
+  }
+  return Math.min(100, Math.max(0, Math.round(val)));
+}
+
 export interface VisualEvidence {
   source: "text" | "logo" | "shape" | "layout" | "ocr" | "model_features" | "other";
   description: string;
-  confidence?: number; // 0 to 1
+  confidence?: number | null; // 0 to 100 canonical
 }
 
 export interface VisualAttributes {
@@ -29,7 +37,7 @@ export interface VisualProductRecognitionResult {
   model: string | null;
   productType: string | null;
   visualAttributes: VisualAttributes;
-  confidence: number | null; // 0 to 1
+  confidence: number | null; // 0 to 100 canonical
   evidence: VisualEvidence[];
   rawResponse?: any; // Underlying provider response details if needed
 }

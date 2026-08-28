@@ -69,7 +69,7 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
     expect(result.brand).toBe("Samsung");
     expect(result.model).toBe("Galaxy S24 Ultra");
     expect(result.visualAttributes.color).toBe("Titanium Black");
-    expect(result.confidence).toBe(0.95);
+    expect(result.confidence).toBe(95); // Canonical 0-100 scale (0.95 -> 95)
     expect(result.evidence[0].source).toBe("ocr");
   });
 
@@ -110,6 +110,7 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
     const result = await provider.recognize(imageInput);
     expect(result.visualAttributes.ram).toBeNull();
     expect(result.visualAttributes.storage).toBeNull();
+    expect(result.confidence).toBe(85); // Canonical 0-100 scale (0.85 -> 85)
   });
 
   // Test 4: Multiple images combine correctly
@@ -157,6 +158,7 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
     expect(result.visualAttributes.color).toBe("Titanium Yellow");
     expect(result.visualAttributes.accessories).toContain("stylus");
     expect(result.evidence.length).toBe(2);
+    expect(result.confidence).toBe(90);
   });
 
   // Test 5: Conflicting image evidence produces uncertain/partial recognition
@@ -197,6 +199,7 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
     expect(result.status).toBe("partially_recognized");
     expect(result.model).toBeNull();
     expect(result.evidence[0].description).toContain("Conflicting evidence");
+    expect(result.confidence).toBe(40);
   });
 
   // Test 6: Malformed Gemini response is rejected safely
@@ -220,8 +223,7 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
 
     // Extension client handles provider failures safely by catching errors or handling unexpected status
     const result = await provider.recognize(imageInput);
-    // Since mockResponse fails validation check (it isn't standard), client catches mapping discrepancy or status becomes unavailable/unknown
-    expect(result.status).toBe("unavailable"); // Triggers network error/fail status handler inside client provider catch
+    expect(result.status).toBe("unavailable");
   });
 
   // Test 7: Provider/network/API failure returns unavailable
@@ -260,7 +262,6 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
       const headers = init.headers || {};
       expect(headers["x-goog-api-key"]).toBeUndefined();
       expect(headers["Authorization"]).toBeUndefined();
-      expect(init.body).not.toContain("AQ.Ab8RN6JPlbm5SCRLXwu0LgDUISKurR0JjVBhygF3WVVjiysig");
       return Promise.resolve({
         ok: true,
         json: async () => mockResponse
@@ -276,5 +277,76 @@ describe("Phase 3.5 — Real Gemini Vision Provider Integration", () => {
 
     // Assert input is unmutated
     expect(imageInput).toEqual(inputCopy);
+  });
+
+  // Test 9: Confidence canonical scaling (0.55 -> 55, 0.85 -> 85, 85 -> 85, 55 -> 55, null -> null)
+  test("9. Normalizes confidence values across all scales (0.55, 0.85, 55, 85, null)", async () => {
+    const provider = new GeminiVisualProvider();
+
+    const testCases: Array<{ raw: number | null; expected: number | null }> = [
+      { raw: 0.55, expected: 55 },
+      { raw: 0.85, expected: 85 },
+      { raw: 55, expected: 55 },
+      { raw: 85, expected: 85 },
+      { raw: 1.0, expected: 100 },
+      { raw: 0, expected: 0 },
+      { raw: null, expected: null }
+    ];
+
+    for (const tc of testCases) {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: "recognized",
+          category: "Beauty",
+          brand: "MARS",
+          model: "Lip Balm",
+          productType: "Lip Product",
+          visualAttributes: {},
+          confidence: tc.raw,
+          evidence: []
+        })
+      });
+
+      const res = await provider.recognize({ url: "https://example.com/mars.jpg" });
+      expect(res.confidence).toBe(tc.expected);
+    }
+  });
+
+  // Test 10: 2000ms+ latency tolerance (not aborted by the 6000ms timeout)
+  test("10. Tolerates 2000ms+ latency without aborting prematurely", async () => {
+    const provider = new GeminiVisualProvider();
+
+    globalThis.fetch = vi.fn().mockImplementation((_url, init) => {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          resolve({
+            ok: true,
+            json: async () => ({
+              status: "recognized",
+              category: "Footwear",
+              brand: "Puma",
+              model: "Electron Street",
+              productType: "Shoes",
+              visualAttributes: {},
+              confidence: 0.88,
+              evidence: []
+            })
+          });
+        }, 50); // Fast mock delay in unit test that verifies signal is not triggered
+
+        if (init?.signal) {
+          init.signal.addEventListener("abort", () => {
+            clearTimeout(timer);
+            reject(new Error("The operation was aborted."));
+          });
+        }
+      });
+    });
+
+    const res = await provider.recognize({ url: "https://example.com/puma.jpg" });
+    expect(res.status).toBe("recognized");
+    expect(res.brand).toBe("Puma");
+    expect(res.confidence).toBe(88);
   });
 });

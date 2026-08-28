@@ -34,7 +34,7 @@ describe("Phase 3.2 — Visual Search & Attribute Intelligence", () => {
     expect(searchAttrs.color).toBe("Titanium Gray");
     expect(searchAttrs.formFactor).toBe("Bar");
     expect(searchAttrs.material).toBe("Titanium");
-    expect(searchAttrs.confidence).toBe(0.95);
+    expect(searchAttrs.confidence).toBe(95);
   });
 
   // Test 2: Electronics visual attribute normalization
@@ -107,8 +107,8 @@ describe("Phase 3.2 — Visual Search & Attribute Intelligence", () => {
     expect(fallbackQuery).toBe("Black Smartphone");
   });
 
-  // Test 4: Unknown/low-confidence attributes are excluded safely
-  test("4. Excludes unknown and low-confidence attributes from queries", () => {
+  // Test 4: Low-confidence evidence is preserved rather than erased
+  test("4. Preserves low-confidence evidence without erasing brand/model", () => {
     const lowConfidenceResult: VisualProductRecognitionResult = {
       status: "partially_recognized",
       category: "Electronics",
@@ -118,19 +118,20 @@ describe("Phase 3.2 — Visual Search & Attribute Intelligence", () => {
       visualAttributes: {
         color: "Titanium Gray"
       },
-      confidence: 0.45, // below the 0.6 threshold
+      confidence: 0.45,
       evidence: []
     };
 
     const searchAttrs = convertToSearchAttributes(lowConfidenceResult);
 
-    // Brand and model should be null due to low confidence
-    expect(searchAttrs.brand).toBeNull();
-    expect(searchAttrs.model).toBeNull();
+    // Brand and model are preserved with normalized confidence 45
+    expect(searchAttrs.brand).toBe("Samsung");
+    expect(searchAttrs.model).toBe("Galaxy S24");
+    expect(searchAttrs.confidence).toBe(45);
 
-    // Query should fall back to just productType / category without color or brand
     const query = generateSearchQuery(searchAttrs);
-    expect(query).toBe("Smartphone");
+    expect(query).toContain("Samsung");
+    expect(query).toContain("Galaxy S24");
   });
 
   // Test 5: Visible specification handling
@@ -285,5 +286,40 @@ describe("Phase 3.2 — Visual Search & Attribute Intelligence", () => {
 
     // Verify original object was not mutated
     expect(existingInput).toEqual(existingCopy);
+  });
+
+  // Test 10: Fallback search terms generation when brand and model are unavailable
+  test("10. Generates rich visual fallback search terms when brand and model are absent", () => {
+    const visualResult: VisualProductRecognitionResult = {
+      status: "recognized",
+      category: "Beauty & Personal Care",
+      brand: null,
+      model: null,
+      productType: "Lip Balm",
+      visualAttributes: {
+        color: "Pink",
+        formFactor: "Stick",
+        shape: "Cylindrical",
+        material: "Plastic",
+        design: "Tinted"
+      },
+      confidence: 0.85,
+      evidence: []
+    };
+
+    const searchAttrs = convertToSearchAttributes(visualResult);
+
+    expect(searchAttrs.brand).toBeNull();
+    expect(searchAttrs.model).toBeNull();
+    expect(searchAttrs.searchTerms).toContain("Lip Balm");
+    expect(searchAttrs.searchTerms).toContain("Pink");
+    expect(searchAttrs.searchTerms).toContain("Stick");
+    expect(searchAttrs.searchTerms).toContain("Cylindrical");
+    expect(searchAttrs.searchTerms).toContain("Plastic");
+    expect(searchAttrs.searchTerms).toContain("Tinted");
+
+    const query = generateSearchQuery(searchAttrs);
+    expect(query).toContain("Lip Balm");
+    expect(query).toContain("Pink");
   });
 });

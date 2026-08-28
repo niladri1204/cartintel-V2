@@ -15,6 +15,7 @@ import { evaluateOfferLevelDecisions } from "./offerDecision";
 import type { ScoredCandidateEvaluation, ProductDecisionGroup, OfferDecisionResult } from "./decisionTypes";
 import { compareProducts } from "../matching";
 import type { ProductIntelligence } from "../types";
+import { emitOfferTrace } from "../../utils/terminalTrace";
 
 function calculateExtendedConfidence(
   candidate: RecommendationCandidate | null,
@@ -365,7 +366,11 @@ export function buildExplainableRecommendation(
   const startTime = Date.now();
 
   const productDecision = evaluateProductLevelDecisions(request, candidates);
+  emitOfferTrace("4. After evaluateProductLevelDecisions()", productDecision.bestProductGroup?.offers || []);
+
   const offerDecision = evaluateOfferLevelDecisions(request, productDecision.bestProductGroup, candidates);
+  emitOfferTrace("5. After evaluateOfferLevelDecisions()", offerDecision.allEligibleOffers || [], true);
+
   const selResult = selectBestRecommendation(request, candidates);
 
   const eligibleScored = selResult.scoredEvaluations.filter(e => e.eligibility === "eligible");
@@ -421,6 +426,8 @@ export function buildExplainableRecommendation(
     processedAt: Date.now(),
     executionTimeMs
   };
+
+  emitOfferTrace("6. Immediately before recommendation.allEligibleOffers is returned", offerDecision.allEligibleOffers || [], true);
 
   return {
     recommendedCandidate: selResult.recommendedCandidate,

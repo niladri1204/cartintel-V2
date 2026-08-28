@@ -228,9 +228,65 @@ function areCategoriesCompatible(cat1: string, cat2: string): boolean {
     "device"
   ];
 
+  const beautySubstrings = [
+    "beauty",
+    "personal care",
+    "cosmetics",
+    "makeup",
+    "skincare",
+    "haircare",
+    "grooming",
+    "health & beauty",
+    "bath & body"
+  ];
+
+  const fashionSubstrings = [
+    "fashion",
+    "apparel",
+    "clothing",
+    "footwear",
+    "shoes",
+    "wear",
+    "attire",
+    "garment"
+  ];
+
+  const grocerySubstrings = [
+    "grocery",
+    "food",
+    "beverage",
+    "snack",
+    "pantry",
+    "supermarket"
+  ];
+
+  const furnitureSubstrings = [
+    "furniture",
+    "home",
+    "decor",
+    "furnishing",
+    "living"
+  ];
+
   const c1IsTech = techSubstrings.some(s => c1.includes(s));
   const c2IsTech = techSubstrings.some(s => c2.includes(s));
   if (c1IsTech && c2IsTech) return true;
+
+  const c1IsBeauty = beautySubstrings.some(s => c1.includes(s));
+  const c2IsBeauty = beautySubstrings.some(s => c2.includes(s));
+  if (c1IsBeauty && c2IsBeauty) return true;
+
+  const c1IsFashion = fashionSubstrings.some(s => c1.includes(s));
+  const c2IsFashion = fashionSubstrings.some(s => c2.includes(s));
+  if (c1IsFashion && c2IsFashion) return true;
+
+  const c1IsGrocery = grocerySubstrings.some(s => c1.includes(s));
+  const c2IsGrocery = grocerySubstrings.some(s => c2.includes(s));
+  if (c1IsGrocery && c2IsGrocery) return true;
+
+  const c1IsFurniture = furnitureSubstrings.some(s => c1.includes(s));
+  const c2IsFurniture = furnitureSubstrings.some(s => c2.includes(s));
+  if (c1IsFurniture && c2IsFurniture) return true;
 
   return false;
 }
@@ -250,8 +306,24 @@ function areProductTypesCompatible(pt1: string, pt2: string): boolean {
     return true;
   }
 
-  const genericApparel = ["apparel", "clothing", "garment"];
-  if (genericApparel.includes(p1) || genericApparel.includes(p2)) {
+  const genericApparel = ["apparel", "clothing", "garment", "t-shirt", "shirt", "top", "dress", "pant", "jeans"];
+  if ((genericApparel.some(s => p1.includes(s)) && genericApparel.some(s => p2.includes(s))) || genericApparel.includes(p1) || genericApparel.includes(p2)) {
+    return true;
+  }
+
+  // Beauty & Cosmetics product type compatibility
+  const eyelinerTerms = ["eyeliner", "liner", "eye makeup", "kajal", "kohl"];
+  if (eyelinerTerms.some(s => p1.includes(s)) && eyelinerTerms.some(s => p2.includes(s))) {
+    return true;
+  }
+
+  const cleanserTerms = ["cleanser", "face wash", "facewash", "skin cleanser", "wash"];
+  if (cleanserTerms.some(s => p1.includes(s)) && cleanserTerms.some(s => p2.includes(s))) {
+    return true;
+  }
+
+  const lipTerms = ["lipstick", "lip color", "lip balm", "lip tint", "lip gloss"];
+  if (lipTerms.some(s => p1.includes(s)) && lipTerms.some(s => p2.includes(s))) {
     return true;
   }
 

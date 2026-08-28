@@ -59,8 +59,8 @@ const samplePixelPageProduct: ProductIntelligence = {
 const mock40RawPixelResults: RawProductResult[] = [
   // 10 legitimate Pixel 10a offers across distinct merchants
   { title: "Google Pixel 10a (256 GB, 8 GB RAM) Obsidian", price: 54599, currency: "INR", source: "Amazon.in", url: "https://www.amazon.in/dp/B0PIXEL10A1" },
-  { title: "Google Pixel 10a 5G 256GB Hazel", price: 55999, currency: "INR", source: "Flipkart", url: "https://www.flipkart.com/pixel-10a/p/itm123" },
-  { title: "Google Pixel 10a 256GB Porcelain", price: 54999, currency: "INR", source: "Reliance Digital", url: "https://www.reliancedigital.in/pixel-10a/p/491" },
+  { title: "Google Pixel 10a 5G 256GB Obsidian", price: 55999, currency: "INR", source: "Flipkart", url: "https://www.flipkart.com/pixel-10a/p/itm123" },
+  { title: "Google Pixel 10a 256GB Obsidian", price: 54999, currency: "INR", source: "Reliance Digital", url: "https://www.reliancedigital.in/pixel-10a/p/491" },
   { title: "Google Pixel 10a 5G 256GB", price: 55499, currency: "INR", source: "Croma", url: "https://www.croma.com/pixel-10a/p/271" },
   { title: "Google Pixel 10a 256GB Official", price: 54999, currency: "INR", source: "Google Store", url: "https://store.google.com/in/product/pixel_10a_buy" },
   { title: "Google Pixel 10a 5G 256GB Obsidian", price: 56499, currency: "INR", source: "Vijay Sales", url: "https://www.vijaysales.com/pixel-10a/p/88" },

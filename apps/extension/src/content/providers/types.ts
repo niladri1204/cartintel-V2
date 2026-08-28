@@ -1,5 +1,6 @@
 export interface ExtractedData {
   title?: string | null;
+  brand?: string | null;
   price?: number | null;
   currency?: string | null;
   image?: string | null;

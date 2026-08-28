@@ -1,5 +1,5 @@
-/// <reference types="vite/client" />
 import type { ImageInput, VisualProductRecognitionResult } from "./types";
+import { normalizeVisualConfidence } from "./types";
 
 export interface VisualRecognitionProvider {
   id: string;
@@ -121,7 +121,7 @@ export class GeminiVisualProvider implements VisualRecognitionProvider {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
       console.log("[Visual] POST /api/visual");
       const response = await fetch(`${API_BASE_URL}/api/visual`, {
@@ -145,7 +145,16 @@ export class GeminiVisualProvider implements VisualRecognitionProvider {
         throw new Error("Malformed visual recognition response status.");
       }
 
-      console.log("[VisualTrace] Gemini result:", result.status, result.category, result.brand, result.model);
+      // Canonical confidence normalization
+      result.confidence = normalizeVisualConfidence(result.confidence);
+      if (Array.isArray(result.evidence)) {
+        result.evidence = result.evidence.map((ev) => ({
+          ...ev,
+          confidence: normalizeVisualConfidence(ev.confidence)
+        }));
+      }
+
+      console.log("[VisualTrace] Gemini result:", result.status, result.category, result.brand, result.model, "confidence:", result.confidence);
       return result;
     } catch (error) {
       console.error("GeminiVisualProvider recognition failed:", error);

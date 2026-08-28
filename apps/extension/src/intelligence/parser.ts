@@ -4,7 +4,7 @@ import { inferCategoryAndType } from "./category";
 import { inferDomain } from "./domain";
 import { extractQuantity } from "./quantity";
 
-import { extractBrand } from "./brand";
+import { resolveBrand } from "./brand";
 import { extractModel } from "./model";
 import { extractAttributes } from "./attributes";
 import { generateVariantSignature } from "./variant";
@@ -15,6 +15,9 @@ export interface ParsedProduct {
   domain: string | null;
   category: string | null;
   brand: string | null;
+  brandConfidence?: number;
+  brandSource?: string;
+  brandEvidence?: string[];
   quantity: number | null;
   unit: string | null;
   packSize: number | null;
@@ -74,14 +77,26 @@ export interface ParsedProduct {
 /**
  * Extracts raw values from the detected title by passing it through the intelligence modules.
  */
-export function parseProductTitle(originalTitle: string | null): ParsedProduct {
+export function parseProductTitle(
+  originalTitle: string | null,
+  structuredBrand?: string | null,
+  url?: string | null
+): ParsedProduct {
   const normalizedTitle = normalizeString(originalTitle);
   const tokens = tokenize(normalizedTitle);
   const categoryInfo = inferCategoryAndType(normalizedTitle);
 
   const quantityInfo = extractQuantity(normalizedTitle);
 
-  const brand = extractBrand(tokens);
+  const brandRes = resolveBrand({
+    structuredBrand,
+    url,
+    title: originalTitle,
+    normalizedTitle,
+    tokens,
+    category: categoryInfo.category
+  });
+  const brand = brandRes.brand;
   const attributesInfo = extractAttributes(tokens, categoryInfo.category);
 
   const result: ParsedProduct = {
@@ -90,6 +105,9 @@ export function parseProductTitle(originalTitle: string | null): ParsedProduct {
     domain: inferDomain(categoryInfo.category, normalizedTitle),
     category: categoryInfo.category,
     brand,
+    brandConfidence: brandRes.confidence,
+    brandSource: brandRes.source,
+    brandEvidence: brandRes.evidence,
     ...quantityInfo,
     subcategory: null,
     productType: categoryInfo.productType,

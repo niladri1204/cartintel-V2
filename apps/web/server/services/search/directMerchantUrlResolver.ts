@@ -149,9 +149,45 @@ export const MERCHANT_DOMAIN_RULES: MerchantDomainRule[] = [
     tier: 1,
   },
   {
-    merchantPatterns: ["nykaa", "nykaa fashion", "nykaa.com", "nykaafashion.com"],
-    domains: ["nykaafashion.com", "nykaa.com", "www.nykaafashion.com", "www.nykaa.com"],
-    siteFilter: "(site:nykaafashion.com OR site:nykaa.com)",
+    merchantPatterns: ["nykaa", "nykaa.com", "nykaa fashion", "nykaafashion.com", "nykaa now", "nykaa man"],
+    domains: ["nykaa.com", "nykaafashion.com", "www.nykaa.com", "www.nykaafashion.com"],
+    siteFilter: "(site:nykaa.com OR site:nykaafashion.com)",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["pharmeasy", "pharmeasy.in"],
+    domains: ["pharmeasy.in", "www.pharmeasy.in"],
+    siteFilter: "site:pharmeasy.in",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["1mg", "tata 1mg", "1mg.com"],
+    domains: ["1mg.com", "www.1mg.com"],
+    siteFilter: "site:1mg.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["apollo247", "apollo 247", "apollo pharmacy", "apollo247.com"],
+    domains: ["apollo247.com", "www.apollo247.com"],
+    siteFilter: "site:apollo247.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["netmeds", "netmeds.com"],
+    domains: ["netmeds.com", "www.netmeds.com"],
+    siteFilter: "site:netmeds.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["firstcry", "firstcry india", "firstcry.com"],
+    domains: ["firstcry.com", "www.firstcry.com"],
+    siteFilter: "site:firstcry.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["dawaadost", "dawaadost.com"],
+    domains: ["dawaadost.com", "www.dawaadost.com"],
+    siteFilter: "site:dawaadost.com",
     tier: 2,
   },
   {
@@ -206,6 +242,90 @@ export const MERCHANT_DOMAIN_RULES: MerchantDomainRule[] = [
     merchantPatterns: ["bookchor", "bookchor.com"],
     domains: ["bookchor.com", "www.bookchor.com"],
     siteFilter: "site:bookchor.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["innovist", "innovist.com", "bare anatomy", "chemist at play", "sunscoop"],
+    domains: ["innovist.com", "www.innovist.com"],
+    siteFilter: "site:innovist.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["beardo", "beardo.in", "beardo official store"],
+    domains: ["beardo.in", "www.beardo.in"],
+    siteFilter: "site:beardo.in",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["meesho", "meesho.com"],
+    domains: ["meesho.com", "www.meesho.com"],
+    siteFilter: "site:meesho.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["tira", "tira beauty", "tirabeauty.com"],
+    domains: ["tirabeauty.com", "www.tirabeauty.com"],
+    siteFilter: "site:tirabeauty.com",
+    tier: 1,
+  },
+  {
+    merchantPatterns: ["beminimalist.co", "minimalist", "be minimalist", "beminimalist"],
+    domains: ["beminimalist.co", "www.beminimalist.co"],
+    siteFilter: "site:beminimalist.co",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["the derma co", "dermaco", "thedermaco.com"],
+    domains: ["thedermaco.com", "www.thedermaco.com"],
+    siteFilter: "site:thedermaco.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["man matters", "manmatters.com"],
+    domains: ["manmatters.com", "www.manmatters.com"],
+    siteFilter: "site:manmatters.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["shoppers stop", "shoppersstop.com"],
+    domains: ["shoppersstop.com", "www.shoppersstop.com"],
+    siteFilter: "site:shoppersstop.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["recode", "recode studios", "recodefranchise.com", "recodestudios.com"],
+    domains: ["recodestudios.com", "recodefranchise.com"],
+    siteFilter: "(site:recodestudios.com OR site:recodefranchise.com)",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["mars cosmetics", "mars", "marscosmetics.in"],
+    domains: ["marscosmetics.in", "www.marscosmetics.in"],
+    siteFilter: "site:marscosmetics.in",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["purplle", "purplle.com", "purplle beauty", "purplle.com - beauty shop"],
+    domains: ["purplle.com", "www.purplle.com"],
+    siteFilter: "site:purplle.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["dot & key", "dot and key", "dotandkey.com", "dot & key skincare"],
+    domains: ["dotandkey.com", "www.dotandkey.com"],
+    siteFilter: "site:dotandkey.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["smytten", "smytten.com"],
+    domains: ["smytten.com", "www.smytten.com"],
+    siteFilter: "site:smytten.com",
+    tier: 2,
+  },
+  {
+    merchantPatterns: ["clickoncare", "clickoncare.com"],
+    domains: ["clickoncare.com", "www.clickoncare.com"],
+    siteFilter: "site:clickoncare.com",
     tier: 2,
   },
   {
@@ -513,19 +633,31 @@ export function findMerchantDomainRule(merchantName: string | null | undefined):
     return null;
   }
 
+  // Strip common merchant suffixes: " - Beauty Shop", " - MNow", " - Seller", " - Purplle Beauty", etc.
+  const cleanNorm = norm.split(/\s*[-–—|]\s*/)[0].trim();
+
   for (const rule of MERCHANT_DOMAIN_RULES) {
     for (const pattern of rule.merchantPatterns) {
-      if (norm === pattern || norm.startsWith(`${pattern} `) || norm.endsWith(` ${pattern}`)) {
+      if (
+        norm === pattern ||
+        cleanNorm === pattern ||
+        norm.startsWith(`${pattern} `) ||
+        norm.endsWith(` ${pattern}`) ||
+        cleanNorm.startsWith(`${pattern} `) ||
+        norm.includes(pattern) ||
+        cleanNorm.includes(pattern)
+      ) {
         return rule;
       }
     }
   }
 
-  // Fallback 1: If merchantName is already a domain (e.g. desertcart.in, meesho.com, ovantica.com)
-  if (norm.includes(".")) {
-    const cleanDomain = norm.replace(/^https?:\/\//, "").split("/")[0];
+  // Fallback 1: If merchantName or cleanNorm is/contains a domain (e.g. purplle.com, clickoncare.com, meesho.com, ovantica.com)
+  const domainMatch = norm.match(/\b([a-z0-9-]+\.(?:com|in|co\.in|org|net))\b/i);
+  if (domainMatch) {
+    const cleanDomain = domainMatch[1].toLowerCase();
     return {
-      merchantPatterns: [norm],
+      merchantPatterns: [cleanDomain],
       domains: [cleanDomain, `www.${cleanDomain}`],
       siteFilter: `site:${cleanDomain}`,
       tier: 2,
@@ -645,6 +777,39 @@ export function extractRamToken(text: string | null | undefined): string | null 
   return m ? m[0].toLowerCase().replace(/\s+/g, "") : null;
 }
 
+const ORGANIC_FILLER_WORDS = new Set([
+  "buy", "online", "india", "price", "reviews", "review", "shop", "at", "for", "with", "in", "and", "the", "a", "an", "on", "official", "store", "sale", "discount", "order", "best", "free", "shipping", "delivery", "pack", "of", "to", "from", "by", "original", "item", "pdp",
+  // Common merchant branding in SEO titles
+  "amazon", "flipkart", "myntra", "nykaa", "purplle", "tira", "croma", "reliancedigital", "reliance", "tatacliq", "ajio", "meesho", "firstcry", "zepto", "blinkit", "bigbasket", "pharmeasy", "1mg", "apollo247", "netmeds", "innovist", "beardo", "shoppers", "stop"
+]);
+
+const INCOMPATIBLE_PRODUCT_TYPE_PAIRS: [RegExp, RegExp][] = [
+  [/\b(cleanser|face\s*wash|facewash)\b/i, /\b(moisturizer|lotion|sunscreen|serum|toner|cream)\b/i],
+  [/\b(sunscreen|sunblock)\b/i, /\b(cleanser|face\s*wash|serum|toner|scrub)\b/i],
+  [/\b(eyeliner|kajal|kohl)\b/i, /\b(lipstick|lip\s*gloss|foundation|mascara|blush)\b/i],
+  [/\b(lipstick|lip\s*balm|lip\s*tint)\b/i, /\b(eyeliner|kajal|foundation|mascara|shampoo)\b/i],
+  [/\b(shampoo)\b/i, /\b(conditioner|hair\s*oil|face\s*wash)\b/i],
+  [/\b(phone|smartphone)\b/i, /\b(tablet|laptop|smartwatch|earbuds|case|cover)\b/i],
+];
+
+export function normalizeTitleForOrganicMatch(title: string): string {
+  if (!title) return "";
+  return title
+    .toLowerCase()
+    // Normalize units with space: "500 ml" -> "500ml", "100 g" -> "100g", "6 gb" -> "6gb"
+    .replace(/\b(\d+(?:\.\d+)?)\s*(ml|l|g|kg|oz|fl\s*oz|gb|tb|mah|w|inch|inches|cm|mm|m)\b/gi, "$1$2")
+    // Normalize SPF with + signs: "spf 50+" / "spf 50 +" / "spf50" -> "spf 50"
+    .replace(/\bspf\s*(\d+)\+*/gi, "spf $1 ")
+    // Normalize PA ratings like "pa++++" / "pa+++" -> "pa"
+    .replace(/\bpa\+{2,}\b/gi, "pa")
+    // Normalize percentages like "2 %" -> "2%"
+    .replace(/\b(\d+(?:\.\d+)?)\s*%/g, "$1%")
+    // Replace punctuation and symbols (&, +, /, -, comma, brackets) with space
+    .replace(/[&+/,\-–—|():;[\]{}'"`]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // ─── Match Organic Result to Shopping Offer ──────────────────────────────────
 
 export function matchOrganicResultToOffer(
@@ -681,43 +846,69 @@ export function matchOrganicResultToOffer(
   const offerTitle = (offer.title || "").toLowerCase();
   const orgTitle = organicItem.title.toLowerCase();
 
-  // 4. Brand and Model compatibility
-  // Extract core model tokens (e.g. "a17", "iphone 16", "pixel 9a") from offer title
-  const coreModelMatch =
-    offerTitle.match(/\b([a-z]+-?[0-9]+[a-z]*)\b/i) ||
-    offerTitle.match(/\b(iphone\s*\d+[a-z]*|pixel\s*\d+[a-z]*|galaxy\s*[a-z]\d+)\b/i);
-
-  if (coreModelMatch) {
-    const coreModel = coreModelMatch[0].toLowerCase().replace(/\s+/g, "");
-    const cleanOrg = orgTitle.replace(/\s+/g, "");
-    if (!cleanOrg.includes(coreModel)) {
+  // 4. Incompatible product type check (e.g. Cleanser vs Moisturizer, Eyeliner vs Lipstick)
+  for (const [patA, patB] of INCOMPATIBLE_PRODUCT_TYPE_PAIRS) {
+    if (patA.test(offerTitle) && !patB.test(offerTitle) && patB.test(orgTitle) && !patA.test(orgTitle)) {
       return false;
     }
-  } else {
-    // Non-numeric model titles (e.g. "Puma Electron Street", "Nike Air Max"):
-    // Verify core non-generic title tokens overlap with the organic result title
-    const offerWords = offerTitle
-      .replace(/[^\w\s]/g, " ")
-      .split(/\s+/)
-      .filter(w => w.length >= 3 && !["men", "women", "unisex", "shoes", "shoe", "t-shirt", "shirt", "black", "white", "blue", "red", "buy", "online", "india", "price", "sale"].includes(w));
-
-    if (offerWords.length > 0) {
-      const orgWords = orgTitle.replace(/[^\w\s]/g, " ").split(/\s+/);
-      const matchCount = offerWords.filter(w => orgWords.includes(w)).length;
-      if (matchCount < Math.min(2, offerWords.length)) {
-        return false;
-      }
+    if (patB.test(offerTitle) && !patA.test(offerTitle) && patA.test(orgTitle) && !patB.test(orgTitle)) {
+      return false;
     }
   }
 
-  // 5. Storage conflict check
+  // 5. Device model compatibility for Electronics/Phones (e.g. A17 vs M17, iPhone 16 vs 15, S24 vs S23)
+  const deviceModelMatch =
+    offerTitle.match(/\b(galaxy\s*[a-z]\d+|iphone\s*\d+[a-z]*|pixel\s*\d+[a-z]*|[a-z]\d{2,3}[a-z]?)\b/i);
+
+  if (deviceModelMatch) {
+    const modelCode = deviceModelMatch[0]
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    const normOrgNoSpace = normalizeTitleForOrganicMatch(orgTitle).replace(/\s+/g, "");
+    if (!normOrgNoSpace.includes(modelCode)) {
+      return false;
+    }
+  }
+
+  // 6. Brand and Token Overlap Validation
+  const normOffer = normalizeTitleForOrganicMatch(offerTitle);
+  const normOrg = normalizeTitleForOrganicMatch(orgTitle);
+
+  const offerWords = normOffer.split(" ").filter(w => w.length >= 2 && !ORGANIC_FILLER_WORDS.has(w));
+  const orgWords = new Set(normOrg.split(" ").filter(w => w.length >= 2 && !ORGANIC_FILLER_WORDS.has(w)));
+
+  if (offerWords.length === 0) return false;
+
+  // Check first non-generic token as brand anchor if it's distinctive (length >= 3 and not generic gender/descriptor)
+  const genericPrefixes = new Set(["men", "women", "kids", "boys", "girls", "unisex", "combo", "pack", "mini", "set", "new", "super", "gentle", "daily"]);
+  const brandAnchor = offerWords.find(w => !genericPrefixes.has(w));
+  if (brandAnchor && brandAnchor.length >= 3) {
+    // If brand anchor is present, verify it is in the organic result title or hostname
+    if (!orgWords.has(brandAnchor) && !normOrg.includes(brandAnchor) && !organicHost.includes(brandAnchor)) {
+      return false;
+    }
+  }
+
+  // Token overlap check
+  const matchingTokens = offerWords.filter(t => orgWords.has(t) || normOrg.includes(t));
+  const matchRatio = matchingTokens.length / offerWords.length;
+
+  if (offerWords.length <= 2) {
+    if (matchingTokens.length < offerWords.length) return false;
+  } else if (offerWords.length <= 4) {
+    if (matchingTokens.length < 2) return false;
+  } else {
+    if (matchingTokens.length < 2 && matchRatio < 0.4) return false;
+  }
+
+  // 7. Storage conflict check
   const offerStorage = extractStorageToken(offerTitle);
   const orgStorage = extractStorageToken(orgTitle);
   if (offerStorage && orgStorage && offerStorage !== orgStorage) {
     return false;
   }
 
-  // 6. RAM conflict check
+  // 8. RAM conflict check
   const offerRam = extractRamToken(offerTitle);
   const orgRam = extractRamToken(orgTitle);
   if (offerRam && orgRam && offerRam !== orgRam) {
@@ -830,8 +1021,8 @@ export class DirectMerchantUrlResolver {
       return shoppingResults;
     }
 
-    // Step 3: Construct ONE targeted organic resolution search query using domain OR syntax
-    const baseQuery = [
+    // Step 3: Construct targeted parallel organic resolution search queries (max 3 queries, up to 4 domains per query)
+    const rawQuery = [
       searchRequest.brand,
       searchRequest.model || searchRequest.normalizedTitle,
       searchRequest.storage,
@@ -841,42 +1032,60 @@ export class DirectMerchantUrlResolver {
       .join(" ")
       .trim();
 
-    const domainFilters = Array.from(
+    // Clean trailing category labels that bloat the search string
+    const baseQuery = rawQuery
+      .replace(/\s+beauty\s*&\s*personal\s*care\b/i, "")
+      .replace(/\s+electronics\b/i, "")
+      .replace(/\s+fashion\b/i, "")
+      .trim();
+
+    const allDomainFilters = Array.from(
       new Set(
         Array.from(unresolvedRules.values()).map(r => r.domains[0])
       )
     );
-    const organicQuery = `${baseQuery} (${domainFilters.join(" OR ")})`;
 
-    console.log(`[MerchantURLResolver] Executing 1 targeted organic resolution query: "${organicQuery}"`);
-
-    let organicResults: OrganicSearchResultItem[] = [];
-
-    try {
-      const response = await effectiveFetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: {
-          "X-API-KEY": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          q: organicQuery,
-          gl: "in",
-          hl: "en",
-          num: 20,
-        }),
-      });
-
-      if (response.ok) {
-        const data = (await response.json()) as { organic?: OrganicSearchResultItem[] };
-        organicResults = data.organic || [];
-        console.log(`[MerchantURLResolver] Received ${organicResults.length} organic candidates for URL resolution.`);
-      } else {
-        console.warn(`[MerchantURLResolver] Organic search returned status ${response.status}. Skipping resolution.`);
-      }
-    } catch (err) {
-      console.warn("[MerchantURLResolver] Organic resolution search failed or timed out:", err);
+    // Chunk domain filters into targeted groups (max 4 domains per query, max 3 parallel queries)
+    const CHUNK_SIZE = 4;
+    const domainChunks: string[][] = [];
+    for (let i = 0; i < allDomainFilters.length && domainChunks.length < 3; i += CHUNK_SIZE) {
+      domainChunks.push(allDomainFilters.slice(i, i + CHUNK_SIZE));
     }
+
+    const organicPromises = domainChunks.map(async (chunk, idx) => {
+      const organicQuery = `${baseQuery} (${chunk.join(" OR ")})`;
+      console.log(`[MerchantURLResolver] Executing parallel organic query ${idx + 1}/${domainChunks.length}: "${organicQuery}"`);
+      try {
+        const response = await effectiveFetch("https://google.serper.dev/search", {
+          method: "POST",
+          headers: {
+            "X-API-KEY": apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            q: organicQuery,
+            gl: "in",
+            hl: "en",
+            num: 20,
+          }),
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as { organic?: OrganicSearchResultItem[] };
+          return data.organic || [];
+        } else {
+          console.warn(`[MerchantURLResolver] Parallel query ${idx + 1} returned status ${response.status}. Skipping resolution.`);
+          return [];
+        }
+      } catch (err) {
+        console.warn(`[MerchantURLResolver] Parallel query ${idx + 1} failed or timed out:`, err);
+        return [];
+      }
+    });
+
+    const chunkResults = await Promise.all(organicPromises);
+    let organicResults: OrganicSearchResultItem[] = chunkResults.flat();
+    console.log(`[MerchantURLResolver] Received ${organicResults.length} total organic candidates across ${domainChunks.length} parallel queries.`);
 
     // Step 4: Match organic results to unresolved shopping offers
     for (const item of shoppingResults) {

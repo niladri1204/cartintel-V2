@@ -1,4 +1,5 @@
 import type { ImageInput, VisualProductRecognitionResult } from "./types";
+import { normalizeVisualConfidence } from "./types";
 import {
   type VisualSearchAttributes,
   convertToSearchAttributes,
@@ -8,13 +9,18 @@ import {
   type VisualIdentityReconciliation,
   reconcileVisualIdentity
 } from "./visualIdentityReconciliation";
+import {
+  type VisualComparisonEvidence,
+  compareVisualAttributes
+} from "./visualComparison";
 import { extractPageImages } from "./pageImages";
 import { VisualProductRecognitionService } from "./service";
 import type { ProductIntelligence } from "../types";
 import type {
   RecommendationRequest,
   RecommendationResult,
-  RecommendationCandidate
+  RecommendationCandidate,
+  HardConstraint
 } from "../recommendationTypes";
 import {
   type ProductIdentity,
@@ -47,6 +53,7 @@ export interface VisualDiscoveryResult {
   recognition: VisualProductRecognitionResult | null;
   searchAttributes: VisualSearchAttributes | null;
   reconciliation?: VisualIdentityReconciliation | null;
+  visualComparison?: VisualComparisonEvidence | null;
   generatedQueries: string[];
   discoveredCandidates: ProductIntelligence[];
   matchStatus: VisualDiscoveryMatchStatus;
@@ -296,9 +303,9 @@ export async function discoverProductsFromImage(
         "Photographed Product"
     ).toLowerCase(),
     confidence:
-      requestCopy.existingProductContext?.confidence ||
-      searchAttributes.confidence ||
-      0,
+      normalizeVisualConfidence(
+        requestCopy.existingProductContext?.confidence ?? searchAttributes.confidence
+      ) ?? 80,
     fingerprint:
       requestCopy.existingProductContext?.fingerprint ||
       `${effectiveBrand || "unknown"}|${effectiveModel || "unknown"}`,
@@ -320,10 +327,10 @@ export async function discoverProductsFromImage(
     (p) => p !== referenceProduct
   );
 
-  // Determine match status
+  // Determine match status using canonical 0-100 confidence
   let matchStatus: VisualDiscoveryMatchStatus = "no_reliable_match";
   if (matchedProducts.length > 0) {
-    const confidenceScore = primaryIdentity.confidence;
+    const confidenceScore = primaryIdentity.confidence ?? 80;
     if (confidenceScore >= 90) {
       matchStatus = "exact_match";
     } else if (confidenceScore >= 75) {
@@ -368,13 +375,28 @@ export async function discoverProductsFromImage(
     }
   );
 
-  const recRequest: RecommendationRequest = requestCopy.userRequirements || {
+  const mandatoryAsHardConstraints: HardConstraint[] = (requestCopy.userRequirements?.explicitRequirements || [])
+    .filter(r => r.isMandatory)
+    .map(r => {
+      let op: HardConstraint["operator"] = "equals";
+      if (r.operator === "less_than" || r.operator === "greater_than" || r.operator === "less_than_or_equal" || r.operator === "greater_than_or_equal") {
+        op = r.operator;
+      }
+      return {
+        attribute: r.attribute,
+        value: r.value,
+        operator: op
+      };
+    });
+
+  const recRequest: RecommendationRequest = {
+    ...(requestCopy.userRequirements || {}),
+    hardConstraints: [
+      ...(requestCopy.userRequirements?.hardConstraints || []),
+      ...mandatoryAsHardConstraints
+    ],
     candidates: recCandidates
   };
-
-  if (!recRequest.candidates) {
-    recRequest.candidates = recCandidates;
-  }
 
   // Call the existing buildExplainableRecommendation engine
   let recommendationResult: RecommendationResult | null = null;
@@ -400,11 +422,17 @@ export async function discoverProductsFromImage(
     );
   }
 
+  // Compute visual comparison for candidate reference
+  const visualComparison = searchAttributes && discoveredCandidates.length > 0
+    ? compareVisualAttributes(searchAttributes, discoveredCandidates[0])
+    : null;
+
   return {
     status: matchedProducts.length > 0 ? "success" : "partial_success",
     recognition,
     searchAttributes,
     reconciliation,
+    visualComparison,
     generatedQueries,
     discoveredCandidates,
     matchStatus,

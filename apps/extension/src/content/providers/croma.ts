@@ -23,6 +23,15 @@ export const cromaProvider: MarketplaceProvider = {
           }
         }
 
+        // Brand: Product.brand
+        if (productObj.brand) {
+          if (typeof productObj.brand === 'string') {
+            data.brand = productObj.brand.trim();
+          } else if (typeof productObj.brand === 'object' && productObj.brand.name) {
+            data.brand = String(productObj.brand.name).trim();
+          }
+        }
+
         // 2. Price & Currency: Product.offers
         if (productObj.offers) {
           const offers = Array.isArray(productObj.offers)

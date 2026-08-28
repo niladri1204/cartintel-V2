@@ -41,6 +41,22 @@ export function isValidImageUrl(url: string | null | undefined): boolean {
   if (trimmed.startsWith('data:image/gif;base64,R0lGOD') || trimmed.startsWith('data:image/svg+xml')) {
     return false;
   }
+
+  // Reject website logos, studio banners, icons, and sprite graphics
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes('studio-logo') ||
+    lower.includes('myntra-logo') ||
+    lower.includes('sprite') ||
+    lower.includes('header-logo') ||
+    lower.includes('brand-logo') ||
+    lower.includes('favicon') ||
+    lower.includes('logo-') ||
+    lower.includes('-logo.') ||
+    lower.includes('/logo')
+  ) {
+    return false;
+  }
   
   return true;
 }

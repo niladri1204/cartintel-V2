@@ -107,7 +107,7 @@ describe("Phase 4.9.3 — Authoritative Offer Collection & Popup State Consisten
         marketplace: "Amazon"
       },
       {
-        title: "Google Pixel 10a 256GB Hazel",
+        title: "Google Pixel 10a 256GB Obsidian",
         price: 53999,
         extracted_price: 53999,
         currency: "INR",

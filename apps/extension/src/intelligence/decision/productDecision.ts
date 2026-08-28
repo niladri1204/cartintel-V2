@@ -57,6 +57,41 @@ function calculateGroupPreferenceScore(
  * @param candidates Optional explicit list of RecommendationCandidate items.
  * @returns ProductDecisionResult
  */
+const KNOWN_COSMETIC_COLORS = new Set([
+  "obsidian", "hazel", "porcelain", "black", "white", "blue", "navy", "green", "olive",
+  "red", "yellow", "gold", "pink", "rose", "purple", "violet", "grey", "gray", "silver",
+  "brown", "beige", "orange", "cream", "charcoal", "asphalt", "onyx", "coral", "mint",
+  "lavender", "sage", "titanium", "phantom black", "midnight", "starlight", "cosmic black"
+]);
+
+function getCanonicalProductKey(candidate: RecommendationCandidate): string {
+  const p = candidate.product;
+  const brand = (p?.brand || "").toLowerCase().trim();
+  const model = (p?.model || p?.normalizedTitle || p?.originalTitle || "unknown_product").toLowerCase().trim();
+  const storagePart = p?.storage ? `|${p.storage.toLowerCase().trim()}` : "";
+  const volumePart = p?.volume ? `|${p.volume.toLowerCase().trim()}` : "";
+  const packPart = p?.packCount != null ? `|pack_${p.packCount}` : "";
+
+  if (p?.fingerprint) {
+    const parts = p.fingerprint.split("|");
+    const lastPart = parts[parts.length - 1].toLowerCase().trim();
+    let baseFp = p.fingerprint;
+    if (parts.length >= 4 && (KNOWN_COSMETIC_COLORS.has(lastPart) || (p.color && lastPart === p.color.toLowerCase().trim()))) {
+      baseFp = parts.slice(0, -1).join("|");
+    }
+    const storageLower = (p.storage || "").toLowerCase().trim();
+    if (storageLower && /\b\d+\s*(?:gb|tb|mb)\b/i.test(baseFp) && !baseFp.includes(storageLower)) {
+      return `${brand ? `${brand}|` : ""}${model}${storagePart}${volumePart}${packPart}`;
+    }
+    return baseFp;
+  }
+
+  const brandPart = brand ? `${brand}|` : "";
+  const modelPart = model;
+
+  return `${brandPart}${modelPart}${storagePart}${volumePart}${packPart}` || "unknown_product";
+}
+
 export function evaluateProductLevelDecisions(
   request: RecommendationRequest | null | undefined,
   candidates?: RecommendationCandidate[]
@@ -78,14 +113,11 @@ export function evaluateProductLevelDecisions(
   const evalResult = evaluateDecisionInputs(req, candList);
   const candidateEvalMap = new Map(evalResult.evaluations.map(e => [e.candidate, e]));
 
-  // Group candidates by canonical product key (brand + model + storage)
+  // Group candidates by canonical product key (brand + model + storage + volume + packCount)
   const groupsMap = new Map<string, RecommendationCandidate[]>();
 
   for (const candidate of candList) {
-    const p = candidate.product;
-    const brandPart = p?.brand ? `${p.brand.toLowerCase().trim()}|` : "";
-    const modelPart = p?.model ? p.model.toLowerCase().trim() : (p?.normalizedTitle || p?.originalTitle || "unknown_product").toLowerCase().trim();
-    const fp = p?.fingerprint || `${brandPart}${modelPart}`;
+    const fp = getCanonicalProductKey(candidate);
 
     if (!groupsMap.has(fp)) {
       groupsMap.set(fp, []);
@@ -205,18 +237,50 @@ export function evaluateProductLevelDecisions(
   let productScore = 0;
 
   if (eligibleGroups.length > 0) {
-    eligibleGroups.sort((a, b) => {
-      if (b.productFitScore !== a.productFitScore) {
-        return b.productFitScore - a.productFitScore;
-      }
-      if (b.bestIdentityConfidence !== a.bestIdentityConfidence) {
-        return b.bestIdentityConfidence - a.bestIdentityConfidence;
-      }
-      return a.fingerprint.localeCompare(b.fingerprint); // Stable string tie-breaker
-    });
+    // 1. Current-Product Canonical Anchoring:
+    // When the user is browsing a current product page, anchor the primary comparison group
+    // on the group representing the current-page product's canonical identity/variant.
+    const currentProduct =
+      candList.find(c => c.isCurrentProduct)?.product ||
+      req.productContext?.currentProduct ||
+      null;
 
-    bestProductGroup = eligibleGroups[0];
-    productScore = bestProductGroup.productFitScore;
+    let currentGroup: ProductDecisionGroup | undefined = undefined;
+
+    if (currentProduct) {
+      // Locate the group containing the current product offer or matching its canonical identity
+      currentGroup = eligibleGroups.find(g =>
+        g.offers.some(o => o.isCurrentProduct || (Boolean(o.product?.originalUrl) && Boolean(currentProduct.originalUrl) && o.product?.originalUrl === currentProduct.originalUrl))
+      );
+
+      if (!currentGroup && currentProduct.fingerprint) {
+        currentGroup = eligibleGroups.find(g => g.fingerprint === currentProduct.fingerprint);
+      }
+
+      if (!currentGroup) {
+        const currentCanonicalKey = getCanonicalProductKey({ product: currentProduct } as RecommendationCandidate);
+        currentGroup = eligibleGroups.find(g => g.fingerprint === currentCanonicalKey);
+      }
+    }
+
+    if (currentGroup) {
+      bestProductGroup = currentGroup;
+      productScore = bestProductGroup.productFitScore;
+    } else {
+      // Fallback ranking for intent-only search queries without an active browsing product
+      eligibleGroups.sort((a, b) => {
+        if (b.productFitScore !== a.productFitScore) {
+          return b.productFitScore - a.productFitScore;
+        }
+        if (b.bestIdentityConfidence !== a.bestIdentityConfidence) {
+          return b.bestIdentityConfidence - a.bestIdentityConfidence;
+        }
+        return a.fingerprint.localeCompare(b.fingerprint); // Stable string tie-breaker
+      });
+
+      bestProductGroup = eligibleGroups[0];
+      productScore = bestProductGroup.productFitScore;
+    }
   }
 
   return {

@@ -1,4 +1,5 @@
 import type { ImageInput, VisualProductRecognitionResult } from "./types";
+import { normalizeVisualConfidence } from "./types";
 import { type VisualRecognitionProvider, UnavailableVisualProvider, GeminiVisualProvider } from "./provider";
 
 export class VisualProductRecognitionService {
@@ -80,9 +81,12 @@ export class VisualProductRecognitionService {
         visualAttributes: rawResult.visualAttributes
           ? { ...rawResult.visualAttributes }
           : {},
-        confidence: typeof rawResult.confidence === "number" ? rawResult.confidence : null,
+        confidence: normalizeVisualConfidence(rawResult.confidence),
         evidence: Array.isArray(rawResult.evidence)
-          ? rawResult.evidence.map((ev) => ({ ...ev }))
+          ? rawResult.evidence.map((ev) => ({
+              ...ev,
+              confidence: normalizeVisualConfidence(ev.confidence)
+            }))
           : [],
         rawResponse: rawResult.rawResponse,
       };

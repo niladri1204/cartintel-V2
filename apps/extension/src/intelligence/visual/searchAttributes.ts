@@ -1,4 +1,5 @@
 import type { VisualProductRecognitionResult, VisualAttributes } from "./types";
+import { normalizeVisualConfidence } from "./types";
 import type { SearchQueryInput } from "../../services/search/queryGenerator";
 
 export interface VisualSearchAttributes {
@@ -11,12 +12,13 @@ export interface VisualSearchAttributes {
   shape: string | null;
   material: string | null;
   formFactor: string | null;
+  visualSpecifications: string[] | null;
   visibleSpecifications: string[] | null;
   variantIndicators: string[] | null;
   accessories: string[] | null;
   searchTerms: string[];
   confidence: number | null;
-  evidence: Array<{ source: string; description: string; confidence?: number }>;
+  evidence: Array<{ source: string; description: string; confidence?: number | null }>;
 }
 
 function normalizeString(val: string | null | undefined): string | null {
@@ -47,17 +49,17 @@ export function convertToSearchAttributes(
   // Enforce input immutability by deep copying the visualResult input parameters
   const resultCopy = JSON.parse(JSON.stringify(visualResult)) as VisualProductRecognitionResult;
 
-  const isLowConfidence = typeof resultCopy.confidence === "number" && resultCopy.confidence < 0.6;
+  const canonicalConfidence = normalizeVisualConfidence(resultCopy.confidence);
   const isUnknown = resultCopy.status === "unknown" || resultCopy.status === "unavailable";
 
-  // Safely nullify attributes on low-confidence or unknown outputs to prevent bad query generation
+  // Retain extracted evidence regardless of confidence; do not destroy evidence on low confidence
   const category = !isUnknown ? normalizeString(resultCopy.category) : null;
-  const brand = !isUnknown && !isLowConfidence ? normalizeString(resultCopy.brand) : null;
-  const model = !isUnknown && !isLowConfidence ? normalizeString(resultCopy.model) : null;
+  const brand = !isUnknown ? normalizeString(resultCopy.brand) : null;
+  const model = !isUnknown ? normalizeString(resultCopy.model) : null;
   const productType = !isUnknown ? normalizeString(resultCopy.productType) : null;
 
   const rawAttributes = resultCopy.visualAttributes || {};
-  const normalizedAttrs = !isUnknown && !isLowConfidence ? normalizeVisualAttributes(rawAttributes) : {};
+  const normalizedAttrs = !isUnknown ? normalizeVisualAttributes(rawAttributes) : {};
 
   // Extract visible specifications (e.g. "4K", "144Hz", "16GB") backed by visual evidence
   const visibleSpecifications: string[] = [];
@@ -84,7 +86,8 @@ export function convertToSearchAttributes(
             const normalizedMatch = normalizeString(match);
             if (normalizedMatch && !visibleSpecifications.includes(normalizedMatch)) {
               // Ensure we only include it if it's high confidence evidence or not low-confidence
-              if (ev.confidence === undefined || ev.confidence >= 0.7) {
+              const evConf = normalizeVisualConfidence(ev.confidence);
+              if (evConf === null || evConf >= 50) {
                 visibleSpecifications.push(normalizedMatch);
               }
             }
@@ -111,7 +114,7 @@ export function convertToSearchAttributes(
         (ev) =>
           (ev.source === "ocr" || ev.source === "text" || ev.source === "logo") &&
           ev.description.toLowerCase().includes(acc.toLowerCase()) &&
-          (ev.confidence === undefined || ev.confidence >= 0.7)
+          (ev.confidence === undefined || normalizeVisualConfidence(ev.confidence) === null || (normalizeVisualConfidence(ev.confidence) ?? 0) >= 50)
       );
     });
   }
@@ -129,14 +132,39 @@ export function convertToSearchAttributes(
     });
   }
 
-  // Construct initial query search terms
+  // Construct query search terms
   const searchTerms: string[] = [];
   
-  // High confidence items only in query terms
   if (brand) searchTerms.push(brand);
   if (model) searchTerms.push(model);
-  if (normalizedAttrs.color && !isLowConfidence) searchTerms.push(normalizedAttrs.color);
-  if (!model && productType) searchTerms.push(productType); // Fallback to productType if model is unknown
+  if (normalizedAttrs.color && !searchTerms.some(t => t.toLowerCase() === normalizedAttrs.color!.toLowerCase())) {
+    searchTerms.push(normalizedAttrs.color);
+  }
+  if (!model && productType && !searchTerms.some(t => t.toLowerCase() === productType.toLowerCase())) {
+    searchTerms.push(productType);
+  }
+
+  // Fallback search terms when brand and model are missing
+  if (!brand && !model) {
+    if (productType && !searchTerms.some(t => t.toLowerCase() === productType.toLowerCase())) {
+      searchTerms.push(productType);
+    }
+    if (normalizedAttrs.visualCategory && !searchTerms.some(t => t.toLowerCase() === (normalizedAttrs.visualCategory as string)!.toLowerCase())) {
+      searchTerms.push(normalizedAttrs.visualCategory as string);
+    }
+    if (normalizedAttrs.formFactor && !searchTerms.some(t => t.toLowerCase() === normalizedAttrs.formFactor!.toLowerCase())) {
+      searchTerms.push(normalizedAttrs.formFactor);
+    }
+    if (normalizedAttrs.shape && !searchTerms.some(t => t.toLowerCase() === normalizedAttrs.shape!.toLowerCase())) {
+      searchTerms.push(normalizedAttrs.shape);
+    }
+    if (normalizedAttrs.material && !searchTerms.some(t => t.toLowerCase() === normalizedAttrs.material!.toLowerCase())) {
+      searchTerms.push(normalizedAttrs.material);
+    }
+    if (normalizedAttrs.design && !searchTerms.some(t => t.toLowerCase() === normalizedAttrs.design!.toLowerCase())) {
+      searchTerms.push(normalizedAttrs.design);
+    }
+  }
   
   visibleSpecifications.forEach((spec) => {
     if (!searchTerms.includes(spec)) searchTerms.push(spec);
@@ -152,12 +180,18 @@ export function convertToSearchAttributes(
     shape: normalizedAttrs.shape || null,
     material: normalizedAttrs.material || null,
     formFactor: normalizedAttrs.formFactor || null,
+    visualSpecifications: null,
     visibleSpecifications: visibleSpecifications.length > 0 ? visibleSpecifications : null,
     variantIndicators: variantIndicators.length > 0 ? variantIndicators : null,
     accessories: accessories.length > 0 ? accessories : null,
     searchTerms,
-    confidence: typeof resultCopy.confidence === "number" ? resultCopy.confidence : null,
-    evidence: Array.isArray(resultCopy.evidence) ? resultCopy.evidence.map((e) => ({ ...e })) : [],
+    confidence: canonicalConfidence,
+    evidence: Array.isArray(resultCopy.evidence)
+      ? resultCopy.evidence.map((e) => ({
+          ...e,
+          confidence: normalizeVisualConfidence(e.confidence)
+        }))
+      : [],
   };
 }
 

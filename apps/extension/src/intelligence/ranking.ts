@@ -519,8 +519,8 @@ export function calculateMarketplaceReliability(candidate: ProductIntelligence):
 
   const lowerName = marketplaceName.toLowerCase();
   const isExplicitlyUnusable = lowerName === "google" || lowerName === "google shopping";
-  const isUnusableSource = isExplicitlyUnusable || lowerName === "unknown seller/site";
-  const isRecognizedPlatform = !isUnusableSource && RECOGNIZED_PLATFORMS.has(lowerName);
+  const isExplicitlyUnknown = rawMarketplace?.toLowerCase() === "unknown seller/site";
+  const isRecognizedPlatform = !isExplicitlyUnusable && !isExplicitlyUnknown && RECOGNIZED_PLATFORMS.has(lowerName);
 
   const isMarketplaceSpecified = Boolean(
     rawMarketplace &&
@@ -531,8 +531,8 @@ export function calculateMarketplaceReliability(candidate: ProductIntelligence):
 
   const hasValidDomain = Boolean(domain && domain.trim().length > 0 && !domain.includes("google."));
 
-  // 1. Explicitly Unusable / Google Search Redirect Marketplace -> Score 0
-  if (isExplicitlyUnusable && !hasValidDomain) {
+  // 1. Explicitly Unusable / Google Search Redirect Marketplace or explicitly Unknown seller/site -> Score 0
+  if ((isExplicitlyUnusable || isExplicitlyUnknown) && !hasValidDomain) {
     return {
       score: 0,
       reliabilityState: "unusable_marketplace",

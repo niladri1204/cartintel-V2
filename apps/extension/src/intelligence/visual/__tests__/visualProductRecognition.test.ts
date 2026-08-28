@@ -143,7 +143,7 @@ describe("Phase 3.1 — Visual Product Recognition Foundation", () => {
     expect(result.brand).toBe("Samsung");
     expect(result.model).toBe("Galaxy S24 Ultra");
     expect(result.productType).toBe("Smartphone");
-    expect(result.confidence).toBe(0.95);
+    expect(result.confidence).toBe(95); // Normalized to 0-100 scale
   });
 
   // Test 3: Brand/model/product-type extraction from supported recognition output
@@ -242,6 +242,7 @@ describe("Phase 3.1 — Visual Product Recognition Foundation", () => {
   // Test 7: Provider abstraction / unavailable-provider safety
   test("7. Fallback behavior when providers are unavailable", async () => {
     const service = new VisualProductRecognitionService();
+    service.unregisterProvider("gemini_visual_provider");
     
     // Test default fallback provider when no other provider is registered or configured
     const input: ImageInput = { url: "https://example.com/phone.jpg" };

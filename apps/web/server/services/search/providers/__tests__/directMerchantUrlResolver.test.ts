@@ -302,4 +302,126 @@ describe("Phase 4.11.1 — Direct Merchant URL Resolver Tests", () => {
     expect(result[0].url).toBe("https://www.amazon.in/dp/B0GRBRJR71");
     expect(result[1].url).toBe("https://www.flipkart.com/p/itm123");
   });
+
+  // Phase 5.X Hardening Tests:
+  describe("Phase 5.X — URL Resolution Hardening Tests", () => {
+    // A. "SPF 50" vs "SPF 50+" -> valid match
+    test("A. 'SPF 50' vs 'SPF 50+' resolves as a valid match", () => {
+      const offer: RawProductResult = {
+        title: "Dot & Key Vitamin C + E Super Bright Sunscreen SPF 50+ PA++++ (50g)",
+        price: 395,
+        currency: "INR",
+        url: "",
+        source: "Nykaa",
+        marketplace: "Nykaa",
+      };
+      const organic = {
+        title: "Dot & Key Vitamin C + E Sunscreen SPF 50 PA+++ 50g - Buy Online at Nykaa",
+        link: "https://www.nykaa.com/dot-key-vitamin-c-e-sunscreen-spf-50/p/12345",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(true);
+    });
+
+    // B. "500 ml" vs "500ml" -> valid match
+    test("B. '500 ml' vs '500ml' resolves as a valid match", () => {
+      const offer: RawProductResult = {
+        title: "Cetaphil Gentle Skin Cleanser 500 ml",
+        price: 999,
+        currency: "INR",
+        url: "",
+        source: "Amazon.in",
+        marketplace: "Amazon.in",
+      };
+      const organic = {
+        title: "Cetaphil Gentle Skin Cleanser, 500ml with Niacinamide - Amazon.in",
+        link: "https://www.amazon.in/Cetaphil-Gentle-Skin-Cleanser-500ml/dp/B000052YM7",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(true);
+    });
+
+    // C. punctuation/hyphen differences -> valid match
+    test("C. punctuation and hyphen differences resolve as a valid match", () => {
+      const offer: RawProductResult = {
+        title: "MARS Long-Lasting Charming Eyes Liquid Eyeliner - 1ml - Black",
+        price: 199,
+        currency: "INR",
+        url: "",
+        source: "Purplle",
+        marketplace: "Purplle",
+      };
+      const organic = {
+        title: "MARS Long Lasting Charming Eyes Liquid Eyeliner (Black, 1 ml) - Purplle.com",
+        link: "https://www.purplle.com/product/mars-long-lasting-eyeliner",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(true);
+    });
+
+    // D. merchant-added title words -> valid match
+    test("D. merchant-added title words resolve as a valid match", () => {
+      const offer: RawProductResult = {
+        title: "Beardo Men Assorted Perfume Gift Set (4 x 20ml)",
+        price: 499,
+        currency: "INR",
+        url: "",
+        source: "Flipkart",
+        marketplace: "Flipkart",
+      };
+      const organic = {
+        title: "Buy Beardo Men Assorted Perfume Gift Set (4 x 20ml) Online at Best Price in India - Flipkart",
+        link: "https://www.flipkart.com/beardo-men-assorted-perfume-gift-set/p/itm123",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(true);
+    });
+
+    // E. clearly different product with overlapping words -> rejected
+    test("E. clearly different product with overlapping words is rejected", () => {
+      const offer: RawProductResult = {
+        title: "Cetaphil Gentle Skin Cleanser 500ml",
+        price: 999,
+        currency: "INR",
+        url: "",
+        source: "Amazon.in",
+        marketplace: "Amazon.in",
+      };
+      const organic = {
+        title: "Cetaphil Daily Facial Moisturizer 500ml - Amazon.in",
+        link: "https://www.amazon.in/Cetaphil-Daily-Facial-Moisturizer/dp/B000012345",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(false);
+    });
+
+    // F. brand mismatch -> rejected
+    test("F. brand mismatch is rejected", () => {
+      const offer: RawProductResult = {
+        title: "Minimalist 2% Salicylic Acid Cleanser 100ml",
+        price: 299,
+        currency: "INR",
+        url: "",
+        source: "Nykaa",
+        marketplace: "Nykaa",
+      };
+      const organic = {
+        title: "The Derma Co 2% Salicylic Acid Face Cleanser 100ml - Nykaa",
+        link: "https://www.nykaa.com/the-derma-co-2percent-salicylic-cleanser/p/9999",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(false);
+    });
+
+    // G. wrong merchant domain -> rejected
+    test("G. organic result from wrong merchant domain is rejected", () => {
+      const offer: RawProductResult = {
+        title: "Minimalist 2% Salicylic Acid Cleanser 100ml",
+        price: 299,
+        currency: "INR",
+        url: "",
+        source: "Nykaa",
+        marketplace: "Nykaa",
+      };
+      const organic = {
+        title: "Minimalist 2% Salicylic Acid Cleanser 100ml",
+        link: "https://www.amazon.in/Minimalist-Salicylic-Cleanser/dp/B0123456",
+      };
+      expect(matchOrganicResultToOffer(offer, organic)).toBe(false);
+    });
+  });
 });

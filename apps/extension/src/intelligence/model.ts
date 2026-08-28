@@ -77,11 +77,12 @@ export function extractModel(
     text = text.replace(brandRegex, "").trim();
   }
 
-  // 4. Remove structured spec patterns (dual capacities, RAM, Storage, MP, Hz, mAh, W, Processor names)
+  // 4. Remove structured spec patterns (dual capacities, RAM, Storage, MP, Hz, mAh, W, Processor names, volume/weight)
   text = text
     .replace(/\b\d+\s*(?:gb|tb|mb)[\/+,\s]*\d+\s*(?:gb|tb|mb)\b/gi, "")
     .replace(/\b\d+\s*(?:gb|tb|mb)\s*ram\b/gi, "")
     .replace(/\b\d+\s*(?:gb|tb|mb)\b/gi, "")
+    .replace(/\b\d+(?:\.\d+)?\s*(?:ml|l|g|kg|oz|fl\s*oz|pcs|pieces)\b/gi, "")
     .replace(/\b\d+mp\b/gi, "")
     .replace(/\b\d+hz\b/gi, "")
     .replace(/\b\d+mah\b/gi, "")

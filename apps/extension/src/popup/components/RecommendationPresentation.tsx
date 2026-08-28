@@ -1,6 +1,7 @@
 import { Sparkles, CheckCircle2, ShieldCheck, Tag, ExternalLink, Layers, Award } from "lucide-react";
 import type { RecommendationResult } from "../../intelligence/recommendationTypes";
 import { classifyMerchantTier } from "../../intelligence/merchantCoverage";
+import { emitOfferTrace } from "../../utils/terminalTrace";
 
 interface RecommendationPresentationProps {
   recommendation: RecommendationResult;
@@ -39,6 +40,51 @@ export function getMerchantDirectUrl(p?: any): string | null {
   }
   if (rawMerchant.includes("flipkart")) {
     return `https://www.flipkart.com/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("myntra")) {
+    return `https://www.myntra.com/${enc}`;
+  }
+  if (rawMerchant.includes("nykaa")) {
+    return `https://www.nykaa.com/search/result/?q=${enc}`;
+  }
+  if (rawMerchant.includes("purplle")) {
+    return `https://www.purplle.com/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("firstcry")) {
+    return `https://www.firstcry.com/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("ajio")) {
+    return `https://www.ajio.com/search/?text=${enc}`;
+  }
+  if (rawMerchant.includes("beardo")) {
+    return `https://beardo.in/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("mars")) {
+    return `https://marscosmetics.in/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("innovist") || rawMerchant.includes("bare anatomy")) {
+    return `https://innovist.com/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("recode")) {
+    return `https://recodestudios.com/search?q=${enc}`;
+  }
+  if (rawMerchant.includes("pharmeasy")) {
+    return `https://pharmeasy.in/search/all?name=${enc}`;
+  }
+  if (rawMerchant.includes("1mg")) {
+    return `https://www.1mg.com/search/all?name=${enc}`;
+  }
+  if (rawMerchant.includes("apollo")) {
+    return `https://www.apollo247.com/search-results/${enc}`;
+  }
+  if (rawMerchant.includes("netmeds")) {
+    return `https://www.netmeds.com/catalogsearch/result/${enc}/all`;
+  }
+  if (rawMerchant.includes("shoppers")) {
+    return `https://www.shoppersstop.com/search/?text=${enc}`;
+  }
+  if (rawMerchant.includes("meesho")) {
+    return `https://www.meesho.com/search?q=${enc}`;
   }
   if (rawMerchant.includes("croma")) {
     return `https://www.croma.com/searchB?q=${enc}`;
@@ -103,6 +149,16 @@ export function getMerchantDirectUrl(p?: any): string | null {
     return `https://${p.metadata.hostname}/search?q=${enc}`;
   }
 
+  // Universal fallback for any merchant name: generate a clean direct store search link
+  if (rawMerchant && rawMerchant.length > 0) {
+    const cleanMerchantDomain = rawMerchant.replace(/[^a-z0-9.]/gi, "").toLowerCase();
+    if (cleanMerchantDomain.includes(".")) {
+      return `https://${cleanMerchantDomain}/search?q=${enc}`;
+    } else {
+      return `https://www.google.com/search?q=${enc}+${encodeURIComponent(rawMerchant)}`;
+    }
+  }
+
   return null;
 }
 
@@ -110,6 +166,8 @@ export function RecommendationPresentation({
   recommendation,
   getCurrencySymbol = (c) => (c === "USD" ? "$" : "₹")
 }: RecommendationPresentationProps) {
+  emitOfferTrace("8. At the beginning of RecommendationPresentation", recommendation.allEligibleOffers || [], true);
+
   const {
     recommendedCandidate,
     recommendationScore,
@@ -341,6 +399,9 @@ export function RecommendationPresentation({
           <div className="flex flex-col gap-2">
             {alternatives.map((alt, idx) => {
               const altProd = alt.candidate?.product;
+              const altPrice = altProd?.originalPrice != null
+                ? `${getCurrencySymbol(altProd.originalCurrency || "INR")}${altProd.originalPrice.toLocaleString("en-IN")}`
+                : "Price N/A";
               return (
                 <div key={altProd?.fingerprint || idx} className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex flex-col gap-1.5">
                   <div className="flex items-start justify-between gap-2">
@@ -353,13 +414,11 @@ export function RecommendationPresentation({
                         {altProd?.model || altProd?.originalTitle || "Alternative"}
                       </h4>
                     </div>
-                    {alt.scoreDifference > 0 && (
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full shrink-0">
-                        -{alt.scoreDifference} Score Diff
-                      </span>
-                    )}
+                    <span className="font-extrabold text-gray-900 shrink-0">{altPrice}</span>
                   </div>
-                  <p className="text-[11px] text-gray-600 leading-tight pl-5.5">{alt.comparisonMessage}</p>
+                  <span className="text-[11px] text-gray-500 leading-tight">
+                    {alt.comparisonMessage}
+                  </span>
                   {altProd?.originalUrl && (
                     <button
                       onClick={() => handleLinkClick(altProd.originalUrl)}
@@ -403,6 +462,8 @@ export function RecommendationPresentation({
           return priceA - priceB;
         });
 
+        emitOfferTrace("9. Immediately after displayOffers is constructed", displayOffers, true);
+
         if (displayOffers.length === 0) return null;
 
         // Boundary D URL Trace
@@ -427,6 +488,8 @@ export function RecommendationPresentation({
               .filter(Boolean)
           )
         );
+
+        emitOfferTrace("10. Immediately before displayOffers.map()", displayOffers, true);
 
         return (
           <div className="flex flex-col gap-2.5 bg-gray-50/50 p-3 rounded-xl border border-gray-200 shadow-sm mt-1">

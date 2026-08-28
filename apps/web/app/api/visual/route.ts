@@ -124,8 +124,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const modelName = process.env.GEMINI_VISION_MODEL || "gemini-3.5-flash";
-    console.log("[Visual] Gemini request started");
+function normalizeVisualConfidence(val: unknown): number | null {
+  if (val == null || typeof val !== "number" || isNaN(val)) return null;
+  if (val <= 1.0 && val > 0) {
+    return Math.round(val * 100);
+  }
+  return Math.min(100, Math.max(0, Math.round(val)));
+}
+
+    const modelName = process.env.GEMINI_VISION_MODEL || "gemini-2.0-flash";
+    console.log("[Visual] Gemini request started with model:", modelName);
     const response = await ai.models.generateContent({
       model: modelName,
       contents,
@@ -156,12 +164,20 @@ export async function POST(req: Request) {
       throw new Error("Invalid recognition status returned by Gemini.");
     }
 
+    // Canonical confidence normalization (0.0–1.0 -> 0–100)
+    recognitionResult.confidence = normalizeVisualConfidence(recognitionResult.confidence);
+
     // Populate default structures if missing
     if (!recognitionResult.visualAttributes) {
       recognitionResult.visualAttributes = {};
     }
     if (!Array.isArray(recognitionResult.evidence)) {
       recognitionResult.evidence = [];
+    } else {
+      recognitionResult.evidence = recognitionResult.evidence.map((ev: any) => ({
+        ...ev,
+        confidence: normalizeVisualConfidence(ev.confidence)
+      }));
     }
 
     return NextResponse.json(recognitionResult, { headers: corsHeaders });

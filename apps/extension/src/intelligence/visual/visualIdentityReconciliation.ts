@@ -1,4 +1,5 @@
 import type { VisualProductRecognitionResult } from "./types";
+import { normalizeVisualConfidence } from "./types";
 
 export type VisualIdentityStatus =
   | "consistent"
@@ -179,6 +180,6 @@ export function reconcileVisualIdentity(
     visualModel,
     conflicts,
     supportingEvidence,
-    confidence: visualResult.confidence || null
+    confidence: normalizeVisualConfidence(visualResult.confidence)
   };
 }

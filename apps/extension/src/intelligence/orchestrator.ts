@@ -6,12 +6,13 @@ import type { ProductIdentity } from "./resolver";
 
 import { CartIntelDiscoveryProvider } from "../services/search/CartIntelDiscoveryProvider";
 import { DiscoveryEngine } from "../services/search/discoveryEngine";
-import { ensureMerchantCoverage, computeMerchantCoverage } from "./merchantCoverage";
+import { ensureMerchantCoverage, computeMerchantCoverage, classifyMerchantTier } from "./merchantCoverage";
 import type { SearchQueryInput } from "../services/search/queryGenerator";
 import type { RecommendationCandidate, RecommendationResult } from "./recommendationTypes";
 import { buildExplainableRecommendation } from "./decision/decisionExplanation";
 import { buildRecommendationRequest } from "./intent/recommendationRequestBuilder";
 import { isRefurbishedOrUsedProduct, evaluateVariantState } from "./ranking";
+import { emitOfferTrace } from "../utils/terminalTrace";
 
 function normalizeUrl(u?: string | null): string {
   if (!u) return "";
@@ -124,6 +125,8 @@ export async function compareProduct(
   console.log(`[Diagnostic 4] Orchestrator passing to normalization: ${rawResults.length}`);
   const candidates = processSearchResults(rawResults);
 
+  emitOfferTrace("1. After Serper results are mapped", candidates);
+
   // Combine visual candidates and text candidates
   const combinedCandidates = [
     ...candidates,
@@ -164,9 +167,11 @@ export async function compareProduct(
 
   // 5b. Ensure merchant diversity (post-dedup intra-merchant cleanup)
   const dedupedCandidates = ensureMerchantCoverage(mergedCandidates);
+  emitOfferTrace("2. After deduplication", dedupedCandidates);
 
   // 6. Resolve the clustered identity (Phase 1 matching)
   let identity = matchCandidates(currentProduct, dedupedCandidates);
+  emitOfferTrace("3. After matchCandidates()", identity.products);
 
   // Offer Funnel Diagnostics
   const uniqueMerchants = Array.from(
@@ -214,6 +219,9 @@ export async function compareProduct(
         p.metadata?.marketplace || (p as any).source
       );
 
+      const mktTier = classifyMerchantTier(p.metadata?.marketplace || (p as any).source).tier;
+      const defaultMerchantScore = mktTier === 1 ? 95 : mktTier === 2 ? 85 : mktTier === 3 ? 70 : 40;
+
       return {
         product: p,
         isCurrentProduct: normalizeUrl(p.originalUrl) === normalizeUrl(currentProduct.originalUrl),
@@ -223,11 +231,11 @@ export async function compareProduct(
         savingsValue: null,
         savingsPercentage: null,
         currencyMismatch: false,
-        finalRankingScore: (p as any).finalRankingScore ?? p.confidence ?? 0,
-        priceAvailabilityScore: (p as any).priceAvailabilityScore ?? 0,
-        identityConfidenceScore: p.confidence || 0,
-        qualityScore: (p as any).qualityScore ?? 0,
-        marketplaceReliabilityScore: (p as any).marketplaceReliabilityScore ?? 0,
+        finalRankingScore: (p as any).finalRankingScore ?? (p.confidence ? Math.min(100, Math.max(50, p.confidence)) : 80),
+        priceAvailabilityScore: (p as any).priceAvailabilityScore ?? 80,
+        identityConfidenceScore: p.confidence || 90,
+        qualityScore: (p as any).qualityScore ?? 80,
+        marketplaceReliabilityScore: (p as any).marketplaceReliabilityScore ?? defaultMerchantScore,
         duplicateRedundancyScore: 0,
       };
     });

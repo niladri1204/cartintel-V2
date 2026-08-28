@@ -36,17 +36,25 @@ export interface MerchantTierResult {
 }
 
 /**
- * Tier 1: Official manufacturer stores + major authorized Indian retailers.
+ * Tier 1: Major authorized national marketplaces + official OEM/brand stores.
  * These are the highest-trust merchants.
  */
 const TIER_1_PATTERNS: string[] = [
   "amazon",
   "flipkart",
+  "myntra",
+  "nykaa",
+  "ajio",
+  "jiomart",
+  "tata cliq",
+  "tatacliq",
   "reliance digital",
   "reliancedigital",
   "croma",
   "vijay sales",
   "vijaysales",
+  "purplle",
+  "firstcry",
   "samsung",
   "apple",
   "google store",
@@ -60,29 +68,61 @@ const TIER_1_PATTERNS: string[] = [
   "realme",
   "oppo",
   "vivo",
-  "tata cliq",
-  "tatacliq",
   "aptronix",
+  "adidas",
+  "puma",
+  "nike",
 ];
 
 /**
- * Tier 2: Established Indian electronics retailers.
+ * Tier 2: Established verified Indian retailers & D2C brand stores.
  */
 const TIER_2_PATTERNS: string[] = [
-  "myg",
   "zepto",
+  "blinkit",
+  "instamart",
+  "bigbasket",
+  "pharmeasy",
+  "1mg",
+  "tata 1mg",
+  "apollo247",
+  "apollo pharmacy",
+  "netmeds",
+  "dawaadost",
+  "mars cosmetics",
+  "mars",
+  "innovist",
+  "bare anatomy",
+  "chemist at play",
+  "sunscoop",
+  "recode",
+  "recode studios",
+  "recodefranchise",
+  "dot & key",
+  "dotandkey",
+  "smytten",
+  "clickoncare",
+  "newme",
+  "savana",
+  "snitch",
+  "superkicks",
+  "vegnonveg",
+  "shopsy",
+  "meesho",
+  "pepperfry",
+  "urban ladder",
+  "wooden street",
+  "ikea",
+  "wakefit",
+  "bookchor",
+  "myg",
   "poorvika",
   "sangeetha",
-  "sangeetha mobiles",
-  "dotcom stores",
   "unilet",
-  "unilet stores",
-  "blinkit",
-  "bigbasket",
-  "myntra",
-  "jiomart",
-  "easyphones",
   "addmecart",
+  "ovantica",
+  "cashify",
+  "shoppers stop",
 ];
 
 /**

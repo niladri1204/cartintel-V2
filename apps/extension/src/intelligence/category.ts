@@ -150,12 +150,22 @@ const PRODUCT_TYPE_RULES: ProductTypeRule[] = [
   {
     productType: "Lip Product",
     category: "Beauty & Personal Care",
-    patterns: [/\b(?:lipstick|lip\s*balm|lip\s*gloss|lip\s*tint)\b/i]
+    patterns: [/\b(?:lipstick|lip\s*balm|lip\s*gloss|lip\s*tint|lip\s*liner|lip\s*crayon|lip\s*oil|lip\s*stain|lip\s*care)\b/i]
+  },
+  {
+    productType: "Eyeliner & Kajal",
+    category: "Beauty & Personal Care",
+    patterns: [/\b(?:eyeliner|eye\s*liner|kajal|kohl|gel\s*liner|liquid\s*liner)\b/i]
   },
   {
     productType: "Mascara",
     category: "Beauty & Personal Care",
-    patterns: [/\bmascara\b/i]
+    patterns: [/\b(?:mascara|lash\s*sensational|sky\s*high|hypercurl)\b/i]
+  },
+  {
+    productType: "Blush & Highlighter",
+    category: "Beauty & Personal Care",
+    patterns: [/\b(?:blush|blusher|highlighter|contour|bronzer)\b/i]
   },
   {
     productType: "Shampoo",
@@ -168,9 +178,19 @@ const PRODUCT_TYPE_RULES: ProductTypeRule[] = [
     patterns: [/\bconditioner\b/i]
   },
   {
+    productType: "Hair Care",
+    category: "Beauty & Personal Care",
+    patterns: [/\b(?:hair\s*oil|hair\s*mask|hair\s*serum|hair\s*spray|hair\s*spa)\b/i]
+  },
+  {
     productType: "Fragrance",
     category: "Beauty & Personal Care",
     patterns: [/\b(?:perfume|eau\s*de\s*parfum|edp|edt|fragrance|cologne|body\s*mist)\b/i]
+  },
+  {
+    productType: "Deodorant",
+    category: "Beauty & Personal Care",
+    patterns: [/\b(?:deodorant|deo|antiperspirant|roll\s*on)\b/i]
   },
   {
     productType: "Body Care",

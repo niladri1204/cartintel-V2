@@ -18,6 +18,26 @@ export const amazonProvider: MarketplaceProvider = {
         data.title = text;
       }
     }
+
+    // Extract Amazon specific brand
+    const brandSelectors = [
+      '#bylineInfo',
+      '#brand',
+      'a#bylineInfo',
+      'tr.po-brand td.a-span9 span',
+      '.po-brand .a-span9'
+    ];
+    for (const selector of brandSelectors) {
+      const el = document.querySelector(selector);
+      if (el && el.textContent) {
+        let txt = el.textContent.trim();
+        txt = txt.replace(/^(?:brand|visit the|visit)\s*:?\s*/i, '').replace(/\s*store$/i, '').trim();
+        if (txt.length >= 2 && txt.length < 50) {
+          data.brand = txt;
+          break;
+        }
+      }
+    }
     
     // Extract Amazon specific image
     const landingImageEl = document.querySelector('#landingImage') || 

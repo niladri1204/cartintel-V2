@@ -5,6 +5,7 @@ import { normalizeMarketplaceName } from "./marketplace";
 
 export interface RawDetectionData {
   title: string | null;
+  brand?: string | null;
   price: number | null;
   currency: string | null;
   image: string | null;
@@ -24,7 +25,8 @@ export function calculateConfidence(
   storage: string | null,
   ram: string | null,
   variant: string | null,
-  color: string | null
+  color: string | null,
+  brandConfidence?: number
 ): number {
   if (!title || title.trim().length === 0) {
     return 0;
@@ -52,7 +54,14 @@ export function calculateConfidence(
 
   // 2. Core Identity Signals (Max 65 points)
   if (hasBrand) {
-    score += 25;
+    const bConf = brandConfidence !== undefined ? brandConfidence : 90;
+    if (bConf >= 90) {
+      score += 25;
+    } else if (bConf >= 75) {
+      score += 20;
+    } else {
+      score += 10;
+    }
   }
 
   if (hasModel) {
@@ -88,7 +97,7 @@ export function calculateConfidence(
  */
 export function processProduct(raw: RawDetectionData): ProductIntelligence {
   console.log("[2] Product identification started");
-  const parsed = parseProductTitle(raw.title);
+  const parsed = parseProductTitle(raw.title, raw.brand, raw.url);
   const fingerprint = generateFingerprint(
     parsed.brand,
     parsed.model,
@@ -107,10 +116,13 @@ export function processProduct(raw: RawDetectionData): ProductIntelligence {
     parsed.storage || null,
     parsed.ram || null,
     parsed.variant,
-    parsed.color
+    parsed.color,
+    parsed.brandConfidence
   );
 
   console.log("[3] Product identification completed");
+  console.log(`[BRAND RESOLUTION] brand=${parsed.brand ?? "Unknown"} confidence=${parsed.brandConfidence ?? (parsed.brand ? 90 : 0)} source=${parsed.brandSource ?? "unresolved"} evidence="${parsed.brandEvidence?.join("; ") ?? "none"}"`);
+  console.log(`[PRODUCT INTELLIGENCE] category=${parsed.category ?? "Unknown"} categoryConfidence=${parsed.category ? 90 : 0} productType=${parsed.productType ?? "Unknown"} model=${parsed.model ?? "Unknown"} fingerprint=${fingerprint} overallConfidence=${confidence}`);
   console.log(`[4] Normalized product:
     title: ${parsed.normalizedTitle}
     brand: ${parsed.brand}

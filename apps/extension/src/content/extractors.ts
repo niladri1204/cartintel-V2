@@ -191,3 +191,49 @@ export function extractImage(jsonLdProduct: any): string | null {
 
   return null;
 }
+
+export function extractBrandFromPage(jsonLdProduct: any, _url?: string): string | null {
+  // 1. JSON-LD Product.brand
+  if (jsonLdProduct && jsonLdProduct.brand) {
+    if (typeof jsonLdProduct.brand === 'string' && jsonLdProduct.brand.trim().length > 0) {
+      return jsonLdProduct.brand.trim();
+    }
+    if (typeof jsonLdProduct.brand === 'object' && jsonLdProduct.brand.name) {
+      const name = String(jsonLdProduct.brand.name).trim();
+      if (name.length > 0) return name;
+    }
+  }
+
+  // 2. OpenGraph / Meta brand tags
+  const metaBrand = document.querySelector('meta[property="product:brand"], meta[name="brand"], meta[property="og:brand"]');
+  if (metaBrand) {
+    const val = metaBrand.getAttribute('content');
+    if (val && val.trim().length > 0) return val.trim();
+  }
+
+  // 3. Schema itemprop or generic DOM brand classes
+  const brandSelectors = [
+    '[itemprop="brand"]',
+    '.brand-name',
+    'h1.pdp-title',
+    '.pdp-title',
+    '#bylineInfo',
+    '#brand',
+    '.product-brand',
+    '[data-test-id="brand-name"]'
+  ];
+
+  for (const selector of brandSelectors) {
+    const el = document.querySelector(selector);
+    if (el && el.textContent) {
+      let txt = el.textContent.trim();
+      txt = txt.replace(/^(?:brand|visit the|visit)\s*:?\s*/i, '').replace(/\s*store$/i, '').trim();
+      if (txt.length > 0 && txt.length < 50) {
+        return txt;
+      }
+    }
+  }
+
+  return null;
+}
+

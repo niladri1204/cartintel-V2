@@ -210,9 +210,17 @@ export function extractFashionAttributes(tokens: string[]): ProductAttributes {
     }
   }
 
+  // Multi-word material detection (e.g. "leather upper")
+  const lowerText = text.toLowerCase();
+  for (const mat of FASHION_MATERIALS) {
+    if (lowerText.includes(`${mat} upper`)) {
+      material = `${mat} upper`;
+      break;
+    }
+  }
+
   // Multi-word style detection
   if (!style) {
-    const lowerText = text.toLowerCase();
     for (const [key, val] of Object.entries(FOOTWEAR_STYLES)) {
       if (lowerText.includes(key)) {
         style = val;
@@ -227,15 +235,10 @@ export function extractFashionAttributes(tokens: string[]): ProductAttributes {
     size = parsedFootwearSize.rawSize;
   }
 
-  // Upper vs Sole material extraction
+  // Upper material extraction
   let upperMaterial: string | null = null;
-  let soleMaterial: string | null = null;
-
   const upperMatch = text.match(/\b(leather|suede|mesh|canvas|synthetic|textile|knit)\s*upper\b/i);
   if (upperMatch) upperMaterial = upperMatch[1].toLowerCase();
-
-  const soleMatch = text.match(/\b(rubber|eva|tpu|leather)\s*sole\b/i);
-  if (soleMatch) soleMaterial = soleMatch[1].toLowerCase();
 
   const colorFamily = deriveColorFamily(color || text);
 
@@ -245,7 +248,9 @@ export function extractFashionAttributes(tokens: string[]): ProductAttributes {
     size,
     variant,
     style,
-    material: upperMaterial ? `${upperMaterial} upper` : (material || null),
+    material: upperMaterial 
+      ? `${upperMaterial} upper` 
+      : (material || null),
     gender
   };
 }

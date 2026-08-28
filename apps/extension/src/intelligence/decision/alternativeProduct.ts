@@ -39,8 +39,31 @@ export function identifyAlternativeProducts(
   const recDomain = recommendedProduct.product.domain || inferDomain(recommendedProduct.product.category, recommendedProduct.product.normalizedTitle);
   const recProductType = (recommendedProduct.product.productType || "").toLowerCase().trim();
 
+  const req: RecommendationRequest = request || { candidates: [] };
+  const nonPriceHardConstraints = (req.hardConstraints || []).filter(h => h.attribute?.toLowerCase() !== "price");
+
   const candidatesToEvaluate = allGroups.filter(g => {
     if (g.fingerprint === recFingerprint) return false;
+
+    // Filter out candidates violating non-price hard constraints (e.g. brand, category, condition)
+    if (nonPriceHardConstraints.length > 0) {
+      for (const hc of nonPriceHardConstraints) {
+        const attr = hc.attribute?.toLowerCase().trim();
+        const op = hc.operator || "equals";
+        const targetVal = String(hc.value).toLowerCase().trim();
+
+        if (attr === "brand") {
+          const brandVal = (g.product.brand || "").toLowerCase().trim();
+          if (op === "equals" && brandVal !== targetVal) return false;
+        } else if (attr === "category") {
+          const catVal = (g.product.category || "").toLowerCase().trim();
+          if (op === "equals" && catVal !== targetVal) return false;
+        } else if (attr === "condition") {
+          const isRefurb = Boolean(g.offers[0]?.isRefurbishedOrUsed);
+          if (targetVal === "new" && isRefurb) return false;
+        }
+      }
+    }
 
     // Domain Boundary Isolation
     const groupDomain = g.product.domain || inferDomain(g.product.category, g.product.normalizedTitle);
@@ -59,6 +82,12 @@ export function identifyAlternativeProducts(
       }
     }
     // Same model line filter (e.g. S24 256GB vs S24 512GB, Atomic Habits Paperback vs Hardcover)
+    const isDifferentPack =
+      (recommendedProduct.product.packCount != null &&
+        g.product.packCount != null &&
+        recommendedProduct.product.packCount !== g.product.packCount) ||
+      (Boolean((recommendedProduct.product as any).isBundle) !== Boolean((g.product as any).isBundle));
+
     const sameBrand =
       (!recommendedProduct.product.brand && !g.product.brand) ||
       (Boolean(recommendedProduct.product.brand) &&
@@ -66,6 +95,7 @@ export function identifyAlternativeProducts(
         recommendedProduct.product.brand!.toLowerCase() === g.product.brand!.toLowerCase());
 
     if (
+      !isDifferentPack &&
       sameBrand &&
       recommendedProduct.product.model &&
       g.product.model &&

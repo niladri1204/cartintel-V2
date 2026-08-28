@@ -22,8 +22,9 @@ function getNumericPrice(candidate: RecommendationCandidate): number | null {
   return null;
 }
 
-function normalizeIdentityPart(value: string | null | undefined): string {
-  return (value || "")
+function normalizeIdentityPart(value: unknown): string {
+  if (value == null) return "";
+  return String(value)
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
@@ -38,11 +39,11 @@ function isSameCanonicalOfferFamily(
   const anchorBrand = normalizeIdentityPart(anchor.brand);
   const candidateBrand = normalizeIdentityPart(candidate.brand);
 
-  if (!anchorBrand || !candidateBrand || anchorBrand !== candidateBrand) {
+  if (anchorBrand && candidateBrand && anchorBrand !== candidateBrand) {
     return false;
   }
 
-  if (!anchor.model || !candidate.model || !areModelsMatching(anchor.model, candidate.model, anchor.brand)) {
+  if (anchor.model && candidate.model && !areModelsMatching(anchor.model, candidate.model, anchor.brand)) {
     return false;
   }
 
@@ -66,6 +67,22 @@ function isSameCanonicalOfferFamily(
     anchorRam &&
     candidateRam &&
     anchorRam !== candidateRam
+  ) {
+    return false;
+  }
+
+  // Volume is enforced when BOTH sides explicitly know volume.
+  const anchorVol = normalizeIdentityPart(anchor.volume || anchor.quantity);
+  const candidateVol = normalizeIdentityPart(candidate.volume || candidate.quantity);
+  if (anchorVol && candidateVol && anchorVol !== candidateVol) {
+    return false;
+  }
+
+  // Pack count is enforced when BOTH sides explicitly know pack count.
+  if (
+    anchor.packCount != null &&
+    candidate.packCount != null &&
+    anchor.packCount !== candidate.packCount
   ) {
     return false;
   }
@@ -144,10 +161,11 @@ export function evaluateOfferLevelDecisions(
     };
   }
 
-  // 1. Compute cheapestOffer (lowest comparable price among eligible offers)
+  // 1. Compute cheapestOffer (lowest comparable numeric price among eligible offers)
   const validPriceOffers = eligibleOffers.filter(c => {
     const price = getNumericPrice(c);
-    return price != null && Boolean(c.product?.originalCurrency);
+    const isVariantCompatible = c.variantState !== "explicitly_conflicting" && (c as any).isVariantCompatible !== false;
+    return price != null && price > 0 && Boolean(c.product?.originalCurrency) && isVariantCompatible;
   });
 
   let cheapestOffer: RecommendationCandidate | null = null;
@@ -183,10 +201,6 @@ export function evaluateOfferLevelDecisions(
       });
       cheapestOffer = sortedCheapest[0];
     }
-  }
-
-  if (!cheapestOffer) {
-    cheapestOffer = eligibleOffers[0];
   }
 
   // Helper: Relative price score (50 to 100)
@@ -233,40 +247,63 @@ export function evaluateOfferLevelDecisions(
 
   const bestOffer = scoredBestOffers[0].candidate;
 
-  // 3. Compute bestValueOffer (distinct from cheapestOffer: 60% quality/reputation + 40% price efficiency)
-  const scoredValueOffers = comparableOffers.map(candidate => {
-    const priceScore = getRelativePriceScore(candidate);
-    const merchantScore = candidate.marketplaceReliabilityScore ?? 35;
-    const qualityScore = candidate.qualityScore || 50;
-    const rankingScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 50));
-
-    // Quality/reputation component
-    const qualityReputationScore = 0.40 * merchantScore + 0.35 * qualityScore + 0.25 * rankingScore;
-
-    // Value score balances high quality/reputation with price efficiency
-    let valueScore = 0.50 * qualityReputationScore + 0.50 * priceScore;
-
-    const candDomain = candidate.product?.domain || (candidate.product ? inferDomain(candidate.product.category, candidate.product.normalizedTitle) : null);
-    if (candDomain === ProductDomain.Electronics || candidate.product?.category === "Electronics" || candidate.product?.category?.toLowerCase() === "smartphone") {
-      const assessment = evaluateElectronicsOfferValue(
-        candidate,
-        req,
-        comparableOffers,
-        valueScore,
-        priceScore
-      );
-      valueScore = assessment.overallValueScore;
-    }
-
-    return { candidate, valueScore, qualityReputationScore };
+  // 3. Compute bestValueOffer (distinct from cheapestOffer: balances quality/reputation and price efficiency)
+  let bestValueOffer: RecommendationCandidate | null = null;
+  const validValueOffers = comparableOffers.filter(c => {
+    const isVariantCompatible = c.variantState !== "explicitly_conflicting" && (c as any).isVariantCompatible !== false;
+    return isVariantCompatible;
   });
 
-  scoredValueOffers.sort((a, b) => {
-    if (b.valueScore !== a.valueScore) return b.valueScore - a.valueScore;
-    return b.qualityReputationScore - a.qualityReputationScore;
-  });
+  if (validValueOffers.length > 0) {
+    const scoredValueOffers = validValueOffers.map(candidate => {
+      const priceScore = getRelativePriceScore(candidate);
+      const merchantScore = candidate.marketplaceReliabilityScore ?? 35;
+      const qualityScore = candidate.qualityScore || 50;
+      const rankingScore = Math.min(100, Math.max(0, candidate.finalRankingScore || 50));
 
-  const bestValueOffer = scoredValueOffers[0].candidate;
+      // Quality/reputation component
+      const qualityReputationScore = 0.40 * merchantScore + 0.35 * qualityScore + 0.25 * rankingScore;
+
+      // Value score balances high quality/reputation with price efficiency
+      let valueScore = 0.50 * qualityReputationScore + 0.50 * priceScore;
+
+      const candDomain = candidate.product?.domain || (candidate.product ? inferDomain(candidate.product.category, candidate.product.normalizedTitle) : null);
+      if (candDomain === ProductDomain.Electronics || candidate.product?.category === "Electronics" || candidate.product?.category?.toLowerCase() === "smartphone") {
+        const assessment = evaluateElectronicsOfferValue(
+          candidate,
+          req,
+          validValueOffers,
+          valueScore,
+          priceScore
+        );
+        valueScore = assessment.overallValueScore;
+      }
+
+      return { candidate, valueScore, qualityReputationScore };
+    });
+
+    scoredValueOffers.sort((a, b) => {
+      if (b.valueScore !== a.valueScore) return b.valueScore - a.valueScore;
+      return b.qualityReputationScore - a.qualityReputationScore;
+    });
+
+    bestValueOffer = scoredValueOffers[0].candidate;
+  }
+
+  // Runtime Diagnostic (Requirement 8)
+  for (const c of targetOffers) {
+    const p = c.product;
+    const merchant = p?.metadata?.marketplace || (p as any)?.source || "unknown";
+    const title = p?.originalTitle || p?.normalizedTitle || "unknown";
+    const priceStr = p?.originalPrice != null ? `${p?.originalCurrency || "INR"} ${p.originalPrice}` : "Price N/A";
+    const fingerprint = p?.fingerprint || "unknown";
+    const conf = c.identityConfidenceScore ?? p?.confidence ?? 0;
+    const elig = eligibleOffers.includes(c) ? "eligible" : "ineligible";
+    const isCheapest = c === cheapestOffer;
+    const isBestValue = c === bestValueOffer;
+
+    console.log(`[OFFER DECISION DIAGNOSTIC] merchant=${merchant} | title="${title}" | price=${priceStr} | fingerprint=${fingerprint} | identity confidence=${conf} | eligibility=${elig} | cheapestOffer=${isCheapest} | bestValueOffer=${isBestValue}`);
+  }
 
   return {
     request: req,

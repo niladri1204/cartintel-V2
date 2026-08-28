@@ -5,6 +5,7 @@ import type { ProductIntelligence } from "../intelligence/types";
 import { compareProduct, type ComparisonResult } from "../intelligence/orchestrator";
 import type { RecommendationResult as DecisionRecommendationResult } from "../intelligence/recommendationTypes";
 import { RecommendationPresentation } from "./components/RecommendationPresentation";
+import { emitOfferTrace } from "../utils/terminalTrace";
 
 export default function Popup() {
   const [product, setProduct] = useState<ProductDetectionResult | null>(null);
@@ -185,12 +186,15 @@ export default function Popup() {
           </span>
         </div>
 
-        {decisionRecommendation ? (
-          <RecommendationPresentation
-            recommendation={decisionRecommendation}
-            getCurrencySymbol={getCurrencySymbol}
-          />
-        ) : isComparing ? (
+        {decisionRecommendation ? (() => {
+          emitOfferTrace("7. Immediately before Popup passes recommendation into RecommendationPresentation", decisionRecommendation.allEligibleOffers || [], true);
+          return (
+            <RecommendationPresentation
+              recommendation={decisionRecommendation}
+              getCurrencySymbol={getCurrencySymbol}
+            />
+          );
+        })() : isComparing ? (
           <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex flex-col items-center justify-center gap-3 text-center">
             <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
             <p className="text-xs font-semibold text-gray-600">Comparing prices across marketplaces...</p>
