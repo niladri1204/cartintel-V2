@@ -44,4 +44,5 @@ export const client = postgres(connectionString, {
 export const db = drizzle(client, { schema });
 
 export * from "./schema";
-export { sql, eq, and, or, desc, asc, inArray } from "drizzle-orm";
+export * from "./repositories";
+export { sql, eq, and, or, desc, asc, inArray, isNull, isNotNull } from "drizzle-orm";

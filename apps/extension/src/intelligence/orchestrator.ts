@@ -269,6 +269,9 @@ export async function compareProduct(
     }
 
     decisionRecommendation = recResult;
+
+    // 9. Asynchronous Persistence Dispatch (Non-blocking Phase 6.3)
+    dispatchPersistenceAsync(currentProduct, recResult);
   } catch (recErr) {
     console.error("CartIntel Orchestrator: Decision engine error.", recErr);
     errors.push({
@@ -284,6 +287,126 @@ export async function compareProduct(
     errors,
     decisionRecommendation,
   };
+}
+
+function dispatchPersistenceAsync(
+  currentProduct: ProductIntelligence,
+  recResult: RecommendationResult
+): void {
+  try {
+    const API_BASE_URL =
+      (typeof import.meta !== "undefined" && import.meta.env?.VITE_CARTINTEL_API_URL) ||
+      "http://localhost:3000";
+
+    const offersToPersist: any[] = [];
+    const allOffers = recResult.allEligibleOffers || [];
+
+    for (const c of allOffers) {
+      const p = c.product;
+      if (!p || !p.originalUrl) continue;
+
+      let role = "eligible";
+      if (c === recResult.cheapestOffer) role = "cheapest";
+      else if (c === recResult.bestValueOffer) role = "best_value";
+
+      let hostname = "";
+      try {
+        hostname = p.metadata?.hostname || new URL(p.originalUrl).hostname.replace(/^www\./, "");
+      } catch {
+        hostname = p.metadata?.hostname || "";
+      }
+
+      offersToPersist.push({
+        merchantName: p.metadata?.marketplace || (p as any).source || hostname || "Merchant",
+        merchantHostname: hostname,
+        merchantDomain: hostname,
+        brandName: p.brand || null,
+        productTitle: p.normalizedTitle || p.originalTitle || "Product",
+        normalizedModel: p.model || p.productType || p.normalizedTitle || "Model",
+        category: p.category || "General",
+        productType: p.productType || null,
+        canonicalFingerprint: p.fingerprint || `${p.brand || "generic"}|${p.model || p.normalizedTitle}`,
+        color: p.color || null,
+        storage: p.storage || null,
+        ram: p.ram || null,
+        size: p.size || null,
+        originalTitle: p.originalTitle || p.normalizedTitle || "Listing",
+        normalizedTitle: p.normalizedTitle || null,
+        originalUrl: p.originalUrl,
+        imageUrl: p.imageUrl || null,
+        currentPrice: p.originalPrice || 0,
+        currency: p.originalCurrency || "INR",
+        isAvailable: !c.isUnavailable,
+        isRefurbished: c.isRefurbishedOrUsed ?? false,
+        qualityScore: c.qualityScore ?? 80,
+        marketplaceReliabilityScore: c.marketplaceReliabilityScore ?? 80,
+        offerRole: role,
+        rankingTier: c.rankingTier ?? null,
+        finalScore: c.finalRankingScore ?? null,
+      });
+    }
+
+    let cheapestKey: string | null = null;
+    if (recResult.cheapestOffer?.product?.originalUrl) {
+      const cheapUrl = recResult.cheapestOffer.product.originalUrl;
+      try {
+        const cheapHost = recResult.cheapestOffer.product.metadata?.hostname || new URL(cheapUrl).hostname.replace(/^www\./, "");
+        cheapestKey = `${cheapHost}|${cheapUrl}`;
+      } catch {
+        cheapestKey = null;
+      }
+    }
+
+    let bestValueKey: string | null = null;
+    if (recResult.bestValueOffer?.product?.originalUrl) {
+      const valUrl = recResult.bestValueOffer.product.originalUrl;
+      try {
+        const valHost = recResult.bestValueOffer.product.metadata?.hostname || new URL(valUrl).hostname.replace(/^www\./, "");
+        bestValueKey = `${valHost}|${valUrl}`;
+      } catch {
+        bestValueKey = null;
+      }
+    }
+
+    const payload = {
+      sessionToken: `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      queryText: currentProduct.normalizedTitle || currentProduct.originalTitle || "",
+      status: recResult.status || "completed",
+      confidence: recResult.confidence || 90,
+      decisionReasons: recResult.reasons || [],
+      tradeOffs: recResult.tradeOffs || [],
+      anchorProduct: {
+        brandName: currentProduct.brand || null,
+        productTitle: currentProduct.normalizedTitle || currentProduct.originalTitle || "Anchor Product",
+        normalizedModel: currentProduct.model || currentProduct.productType || currentProduct.normalizedTitle || "Anchor Model",
+        category: currentProduct.category || "General",
+        productType: currentProduct.productType || null,
+        canonicalFingerprint: currentProduct.fingerprint || "anchor_fingerprint",
+        color: currentProduct.color || null,
+        storage: currentProduct.storage || null,
+        ram: currentProduct.ram || null,
+        size: currentProduct.size || null,
+        volumeValue: currentProduct.volumeValue || null,
+        volumeUnit: currentProduct.volumeUnit || null,
+        packCount: currentProduct.packCount || 1,
+      },
+      offers: offersToPersist,
+      cheapestOfferMatchKey: cheapestKey,
+      bestValueOfferMatchKey: bestValueKey,
+    };
+
+    if (typeof fetch !== "undefined") {
+      fetch(`${API_BASE_URL}/api/persist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.warn("[CartIntel Orchestrator] Non-blocking persistence notice:", err);
+      });
+    }
+  } catch (err) {
+    console.warn("[CartIntel Orchestrator] Non-blocking persistence dispatch error:", err);
+  }
 }
 
 

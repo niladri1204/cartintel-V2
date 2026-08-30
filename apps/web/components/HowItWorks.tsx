@@ -26,12 +26,12 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="mx-auto max-w-7xl px-6 py-24 bg-gray-50 border-t border-gray-100 rounded-3xl my-12">
+    <section id="how-it-works" className="scroll-mt-28 mx-auto max-w-7xl px-6 py-24 bg-[#0D080D]/65 border border-white/10 rounded-3xl my-16 backdrop-blur-xl shadow-2xl shadow-black/60">
       <div className="text-center max-w-3xl mx-auto mb-16">
-        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 text-gray-900">
+        <h2 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-[#F4EEF3]">
           How It Works
         </h2>
-        <p className="text-gray-600 text-lg">
+        <p className="text-[#B9AEB8] text-lg font-light">
           CartIntel automatically guides your shopping journey in four simple steps.
         </p>
       </div>
@@ -41,16 +41,16 @@ export default function HowItWorks() {
           const Icon = step.icon;
           return (
             <Fragment key={idx}>
-              <div className="w-full bg-white p-6 pt-10 rounded-2xl border border-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-lg flex flex-col items-center text-center flex-1 min-h-[220px]">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 mb-4 flex-shrink-0 flex items-center justify-center">
+              <div className="w-full bg-[#151016]/80 p-6 pt-10 rounded-2xl border border-white/10 shadow-lg shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 hover:border-[#C982A7]/35 hover:shadow-xl hover:shadow-black/70 flex flex-col items-center text-center flex-1 min-h-[220px]">
+                <div className="w-12 h-12 rounded-xl bg-[#5A254D]/35 border border-[#C982A7]/25 text-[#C982A7] mb-4 flex-shrink-0 flex items-center justify-center shadow-inner shadow-[#8A3C70]/20">
                   <Icon className="h-6 w-6" />
                 </div>
-                <h3 className="text-lg font-bold mb-2 text-gray-900 flex-shrink-0">{step.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed max-w-[200px]">{step.description}</p>
+                <h3 className="text-lg font-semibold mb-2 text-[#F4EEF3] flex-shrink-0">{step.title}</h3>
+                <p className="text-[#B9AEB8] text-sm leading-relaxed max-w-[210px] font-light">{step.description}</p>
               </div>
               
               {idx < steps.length - 1 && (
-                <div className="my-4 lg:my-0 lg:mx-2 flex items-center justify-center text-blue-600 rotate-90 lg:rotate-0 flex-shrink-0">
+                <div className="my-4 lg:my-0 lg:mx-2 flex items-center justify-center text-[#C982A7]/60 rotate-90 lg:rotate-0 flex-shrink-0">
                   <ArrowRight className="h-5 w-5" />
                 </div>
               )}

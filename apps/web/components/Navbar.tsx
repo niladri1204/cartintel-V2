@@ -1,59 +1,91 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ChromeIcon } from "./icons/ChromeIcon";
 
 export default function Navbar() {
-    const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-    return (
-        <header className="fixed left-0 right-0 top-8 z-50 flex justify-center px-6 transition-all duration-300">
-            <nav className={`flex w-full max-w-5xl items-center justify-between rounded-2xl border px-8 py-3 transition-all duration-300 backdrop-blur-2xl ${
-                scrolled 
-                    ? "bg-white/95 shadow-xl border-gray-200/80" 
-                    : "bg-white/85 shadow-md border-gray-200/50"
-            }`}>
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (window.location.hash) {
+      window.history.pushState(null, "", window.location.pathname);
+    }
+  };
 
-                <div className="text-2xl font-bold tracking-tight text-gray-900">
-                    CartIntel
-                </div>
+  return (
+    <header className="fixed left-0 right-0 top-6 z-50 flex justify-center px-6 transition-all duration-300">
+      <nav
+        className={`flex w-full max-w-5xl items-center justify-between rounded-2xl border px-6 sm:px-8 py-3.5 transition-all duration-300 backdrop-blur-2xl ${
+          scrolled
+            ? "bg-[#0D080D]/95 border-[#C982A7]/25 shadow-2xl shadow-black/80"
+            : "bg-[#0D080D]/80 border-white/10 shadow-xl shadow-black/50"
+        }`}
+      >
+        {/* Brand Logo - Returns to Top */}
+        <Link
+          href="/"
+          onClick={scrollToTop}
+          className="flex items-center gap-2 text-2xl font-bold tracking-tight text-[#F4EEF3] hover:opacity-90 transition-opacity"
+        >
+          <span>CartIntel</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#C982A7] shadow-[0_0_8px_#C982A7]" />
+        </Link>
 
-                <div className="hidden gap-8 text-gray-600 md:flex font-medium text-sm">
-                    <a href="#features" className="transition hover:text-black">
-                        Features
-                    </a>
+        {/* Section Navigation Links */}
+        <div className="hidden gap-8 text-[#B9AEB8] md:flex font-medium text-sm">
+          <a
+            href="#how-it-works"
+            className="transition-colors duration-200 hover:text-[#F4EEF3]"
+          >
+            How It Works
+          </a>
 
-                    <a href="#how-it-works" className="transition hover:text-black">
-                        How it Works
-                    </a>
+          <a
+            href="#features"
+            className="transition-colors duration-200 hover:text-[#F4EEF3]"
+          >
+            Features
+          </a>
 
-                    <a href="#" className="transition hover:text-black">
-                        Roadmap
-                    </a>
+          <a
+            href="#demo"
+            className="transition-colors duration-200 hover:text-[#F4EEF3]"
+          >
+            Demo
+          </a>
+        </div>
 
-                    <a href="#" className="transition hover:text-black">
-                        Docs
-                    </a>
-                </div>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3">
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-[#F4EEF3] transition-all duration-200 hover:bg-white/[0.08] hover:border-white/20"
+          >
+            GitHub
+          </a>
 
-                <div className="flex items-center gap-4">
-                    <button className="rounded-xl border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100">
-                        GitHub
-                    </button>
-
-                    <button className="rounded-xl bg-black px-5 py-2 text-sm font-medium text-white transition hover:bg-gray-800">
-                        Install
-                    </button>
-                </div>
-
-            </nav>
-        </header>
-    );
+          <a
+            href="#install"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#5A254D] to-[#8A3C70] border border-[#C982A7]/30 px-5 py-2 text-sm font-medium text-[#F4EEF3] shadow-lg shadow-[#8A3C70]/20 transition-all duration-200 hover:from-[#6c2c5c] hover:to-[#9c4580] hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <ChromeIcon className="h-4 w-4 text-[#C982A7]" />
+            <span>Add to Chrome</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+  );
 }
