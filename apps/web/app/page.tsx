@@ -197,6 +197,7 @@ export default function Home() {
                 <button
                   key={feature.tag}
                   className={`feature-item ${activeFeature === index ? "active" : ""}`}
+                  onMouseEnter={() => setActiveFeature(index)}
                   onClick={() => setActiveFeature(index)}
                 >
                   <span>{feature.tag}</span>
@@ -206,9 +207,11 @@ export default function Home() {
             </div>
 
             <div className="feature-detail">
-              <span className="section-kicker">{features[activeFeature].tag}</span>
-              <h3>{features[activeFeature].title}</h3>
-              <p>{features[activeFeature].body}</p>
+              <div className="feature-detail-header">
+                <span className="section-kicker">{features[activeFeature].tag}</span>
+                <h3>{features[activeFeature].title}</h3>
+                <p>{features[activeFeature].body}</p>
+              </div>
 
               {activeFeature === 0 && (
                 <div className="live-panel matching-panel">
@@ -240,6 +243,10 @@ export default function Home() {
                       <span className="match-status exact">✓ Exact Match</span>
                     </div>
                     <div className="retailer-row">
+                      <span className="store-name">Vijay Sales</span>
+                      <span className="match-status exact">✓ Exact Match</span>
+                    </div>
+                    <div className="retailer-row">
                       <span className="store-name">Reliance Digital</span>
                       <span className="match-status exact">✓ Exact Match</span>
                     </div>
@@ -264,37 +271,44 @@ export default function Home() {
                       <strong className="best-price">₹24,990</strong>
                     </div>
                   </div>
-                  <div className="matched-retailers">
-                    <span className="target-label">MARKETPLACE PRICE BREAKDOWN</span>
-                    <div className="retailer-row best">
-                      <div className="store-meta">
-                        <span className="store-name">Flipkart</span>
-                        <span className="mini-tag">Lowest Price</span>
+                    <div className="matched-retailers">
+                      <span className="target-label">MARKETPLACE PRICE BREAKDOWN</span>
+                      <div className="retailer-row best">
+                        <div className="store-meta">
+                          <span className="store-name">Flipkart</span>
+                          <span className="mini-tag">Lowest Price</span>
+                        </div>
+                        <strong className="row-price highlight">₹24,990</strong>
                       </div>
-                      <strong className="row-price highlight">₹24,990</strong>
-                    </div>
-                    <div className="retailer-row">
-                      <div className="store-meta">
-                        <span className="store-name">Croma</span>
-                        <span className="mini-tag">₹2,500 Cheaper</span>
+                      <div className="retailer-row">
+                        <div className="store-meta">
+                          <span className="store-name">Croma</span>
+                          <span className="mini-tag">₹2,500 Cheaper</span>
+                        </div>
+                        <strong className="row-price">₹26,490</strong>
                       </div>
-                      <strong className="row-price">₹26,490</strong>
-                    </div>
-                    <div className="retailer-row">
-                      <div className="store-meta">
-                        <span className="store-name">Reliance Digital</span>
-                        <span className="mini-tag">₹1,000 Cheaper</span>
+                      <div className="retailer-row">
+                        <div className="store-meta">
+                          <span className="store-name">Vijay Sales</span>
+                          <span className="mini-tag">₹1,500 Cheaper</span>
+                        </div>
+                        <strong className="row-price">₹27,490</strong>
                       </div>
-                      <strong className="row-price">₹27,990</strong>
-                    </div>
-                    <div className="retailer-row current">
-                      <div className="store-meta">
-                        <span className="store-name">Amazon</span>
-                        <span className="mini-tag muted">Current Store</span>
+                      <div className="retailer-row">
+                        <div className="store-meta">
+                          <span className="store-name">Reliance Digital</span>
+                          <span className="mini-tag">₹1,000 Cheaper</span>
+                        </div>
+                        <strong className="row-price">₹27,990</strong>
                       </div>
-                      <strong className="row-price muted">₹28,990</strong>
+                      <div className="retailer-row current">
+                        <div className="store-meta">
+                          <span className="store-name">Amazon</span>
+                          <span className="mini-tag muted">Current Store</span>
+                        </div>
+                        <strong className="row-price muted">₹28,990</strong>
+                      </div>
                     </div>
-                  </div>
                 </div>
               )}
 
@@ -319,21 +333,14 @@ export default function Home() {
                       <span className="signal-icon">✓</span>
                       <div className="signal-content">
                         <strong>Top Strengths</strong>
-                        <p>Industry-leading active noise cancellation and balanced spatial clarity.</p>
-                      </div>
-                    </div>
-                    <div className="signal-item positive">
-                      <span className="signal-icon">✓</span>
-                      <div className="signal-content">
-                        <strong>Battery Life</strong>
-                        <p>Reliable 30+ hour playback with 3-minute quick charging.</p>
+                        <p>Industry-leading noise cancellation and spatial audio clarity.</p>
                       </div>
                     </div>
                     <div className="signal-item alert">
                       <span className="signal-icon">⚠</span>
                       <div className="signal-content">
                         <strong>Key Consideration</strong>
-                        <p>Non-folding headband design requires more case space during travel.</p>
+                        <p>Non-folding headband requires dedicated space in travel bags.</p>
                       </div>
                     </div>
                   </div>
@@ -365,26 +372,18 @@ export default function Home() {
                   </div>
 
                   <div className="decision-pillars">
-                    <span className="target-label">WHY CARTINTEL RECOMMENDS THIS</span>
                     <div className="pillar-row">
                       <span className="pillar-num">1</span>
                       <div className="pillar-text">
                         <strong>Lowest Verified Price</strong>
-                        <p>₹24,990 is the cheapest authentic listing across 4 major retailers.</p>
+                        <p>₹24,990 is the cheapest authentic listing across major stores.</p>
                       </div>
                     </div>
                     <div className="pillar-row">
                       <span className="pillar-num">2</span>
                       <div className="pillar-text">
-                        <strong>Exact Identity &amp; Warranty</strong>
-                        <p>100% genuine model match with full manufacturer brand warranty.</p>
-                      </div>
-                    </div>
-                    <div className="pillar-row">
-                      <span className="pillar-num">3</span>
-                      <div className="pillar-text">
-                        <strong>Seller Trust &amp; Reviews</strong>
-                        <p>High seller reliability score and 4.6★ positive customer sentiment.</p>
+                        <strong>Seller Trust &amp; Warranty</strong>
+                        <p>Top-rated merchant fulfillment with full brand warranty.</p>
                       </div>
                     </div>
                   </div>
