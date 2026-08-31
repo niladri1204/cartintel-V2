@@ -49,7 +49,7 @@ const features = [
 ];
 
 const stats = [
-  { value: "50+", label: "supported stores" },
+  { value: "200+", label: "supported stores" },
   { value: "4", label: "intelligence stages" },
   { value: "1", label: "buying recommendation" },
   { value: "100%", label: "free to use" },
@@ -57,6 +57,28 @@ const stats = [
 
 export default function Home() {
   const [activeFeature, setActiveFeature] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [scanCount, setScanCount] = useState(6);
+  const [demoCheckoutState, setDemoCheckoutState] = useState<"idle" | "simulating" | "completed">("idle");
+
+  const handleAnalyze = () => {
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      setIsAnalyzing(false);
+      setScanCount(6);
+    }, 600);
+  };
+
+  const handleDemoCheckout = () => {
+    if (demoCheckoutState !== "idle") return;
+    setDemoCheckoutState("simulating");
+    setTimeout(() => {
+      setDemoCheckoutState("completed");
+      setTimeout(() => {
+        setDemoCheckoutState("idle");
+      }, 2000);
+    }, 700);
+  };
 
   return (
     <div className="cartintel-app">
@@ -113,7 +135,7 @@ export default function Home() {
             <div className="trust-row">
               <span><b>✓</b> 100% Free &amp; Secure</span>
               <span><b>⌁</b> Privacy Focused</span>
-              <span><b>✦</b> Works on 50+ Stores</span>
+              <span><b>✦</b> Works on 200+ Stores</span>
             </div>
           </div>
         </section>
@@ -155,30 +177,124 @@ export default function Home() {
           <div className="demo-shell">
             <div className="demo-browser-bar">
               <span className="browser-dots"><i /><i /><i /></span>
-              <span className="browser-address">amazon.in/product/example-product</span>
+              <span className="browser-address">flipkart.com/apple-iphone-16-black-128-gb/p/itm12345</span>
               <span className="match-pill">✓ Product Matched</span>
             </div>
             <div className="demo-grid">
               <div className="demo-panel product-panel">
-                <span className="mini-label">CURRENT PRODUCT</span>
-                <div className="product-placeholder">PRODUCT</div>
-                <h3>Product Intelligence</h3>
-                <p>CartIntel identifies the product and prepares it for cross-store comparison.</p>
-              </div>
-              <div className="demo-panel">
-                <span className="mini-label">MARKET COMPARISON</span>
-                {["Amazon", "Flipkart", "Croma", "Reliance"].map((store, index) => (
-                  <div className="market-row" key={store}>
-                    <span>{store}</span>
-                    <strong>{index === 1 ? "Best deal" : index === 2 ? "Comparable" : "Checked"}</strong>
+                <div>
+                  <div className="panel-header-row">
+                    <span className="mini-label">CURRENT PRODUCT</span>
+                    <span className="source-pill">Flipkart</span>
                   </div>
-                ))}
+                  <div className="product-image-card">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/iphone-16.png"
+                      alt="Apple iPhone 16"
+                      className="product-showcase-img"
+                    />
+                  </div>
+                  <div className="product-meta-header">
+                    <h3>Apple iPhone 16</h3>
+                    <div className="current-price-tag">
+                      <span className="price-source">Current Price:</span>
+                      <strong className="price-amount">₹69,990</strong>
+                    </div>
+                  </div>
+                  <p className="product-summary-text">
+                    CartIntel identifies the product and prepares it for cross-store comparison.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`analyze-trigger-btn ${isAnalyzing ? "loading" : ""}`}
+                  onClick={handleAnalyze}
+                  title="Click to scan supported marketplaces"
+                >
+                  <span className="btn-dot" aria-hidden="true" />
+                  <span>{isAnalyzing ? "Scanning Marketplaces..." : "Analyse Current Product"}</span>
+                </button>
               </div>
+
+              <div className="demo-panel market-panel">
+                <div>
+                  <div className="panel-header-row">
+                    <span className="mini-label">MARKETPLACE OFFERS</span>
+                    <span className="scan-indicator-badge">
+                      {isAnalyzing ? "Scanning..." : `${scanCount} Offers Found`}
+                    </span>
+                  </div>
+
+                  <div className="market-offers-list">
+                    {[
+                      { store: "Flipkart", status: "Current Store", price: "₹69,990", isBest: false },
+                      { store: "Amazon", status: "Best deal (-₹3,500)", price: "₹66,490", isBest: true },
+                      { store: "Croma", status: "Comparable", price: "₹67,990", isBest: false },
+                      { store: "Vijay Sales", status: "Comparable", price: "₹68,490", isBest: false },
+                      { store: "Reliance Digital", status: "Checked", price: "₹68,990", isBest: false },
+                      { store: "Apple Store", status: "Official Store", price: "₹79,900", isBest: false },
+                    ].map((item) => (
+                      <div className={`market-row ${item.isBest ? "best-deal" : ""}`} key={item.store}>
+                        <div className="market-store-col">
+                          <span className="market-store-name">{item.store}</span>
+                          <small className="market-store-status">{item.status}</small>
+                        </div>
+                        <strong>{item.price}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="market-scan-footer">
+                  <span className="sync-text">✓ Real-time price sync active</span>
+                </div>
+              </div>
+
               <div className="demo-panel insight-panel">
-                <span className="mini-label">AI INSIGHTS</span>
-                <p>✓ Seller and price comparison</p>
-                <p>✓ Review intelligence</p>
-                <p>✓ Better buying recommendation</p>
+                <div>
+                  <div className="panel-header-row">
+                    <span className="mini-label">AI BUYING RECOMMENDATION</span>
+                    <span className="status-dot-badge">AI Verified</span>
+                  </div>
+
+                  <div className="demo-verdict-card">
+                    <div className="verdict-top">
+                      <span className="verdict-tag">Top Recommendation</span>
+                      <span className="verdict-savings">Save ₹3,500</span>
+                    </div>
+                    <strong className="verdict-store">Amazon India</strong>
+                    <div className="verdict-price-row">
+                      <span className="verdict-price">₹66,490</span>
+                      <del>₹69,990</del>
+                    </div>
+                  </div>
+
+                  <div className="insight-bullets">
+                    <p>✓ Lowest verified price across 6 supported marketplaces</p>
+                    <p>✓ 94% positive sentiment across 12,400+ reviews</p>
+                    <p>✓ Top-rated seller with full 1-Year Apple Warranty</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className={`buy-amazon-btn ${demoCheckoutState !== "idle" ? "active-demo" : ""}`}
+                  onClick={handleDemoCheckout}
+                  title="Demo action: Buy directly from Amazon"
+                >
+                  {demoCheckoutState === "simulating" ? (
+                    <span>Opening Best Deal Demo...</span>
+                  ) : demoCheckoutState === "completed" ? (
+                    <span style={{ color: "#a8ddb5" }}>✓ Deal Applied (Save ₹3,500)</span>
+                  ) : (
+                    <>
+                      <span>Buy directly from Amazon</span>
+                      <span className="btn-arrow" aria-hidden="true">→</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -394,10 +510,10 @@ export default function Home() {
         </section>
 
         <section id="install" className="install-section">
-          <span className="section-kicker">GET STARTED</span>
-          <h2>Shop smarter with CartIntel.</h2>
-          <p>Install the extension and let CartIntel work alongside you while you shop.</p>
-          <a className="primary-button large" href="#top">Add to Chrome <span aria-hidden="true">→</span></a>
+          <span className="section-kicker">READY IN SECONDS</span>
+          <h2>Turn scattered shopping into clear decisions.</h2>
+          <p>Let CartIntel analyze prices, seller reliability, and product sentiment every time you browse.</p>
+          <a className="primary-button large" href="#top">Install Extension <span aria-hidden="true">→</span></a>
         </section>
       </main>
 
