@@ -87,6 +87,14 @@ export default function Home() {
 
       <nav className="site-nav" aria-label="Primary navigation">
         <a href="#top" className="brand" aria-label="CartIntel home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/cartintel-logo.png"
+            alt="CartIntel Logo"
+            className="brand-logo"
+            width={26}
+            height={26}
+          />
           <span>CartIntel</span>
         </a>
 
@@ -518,7 +526,17 @@ export default function Home() {
       </main>
 
       <footer className="site-footer">
-        <span>© 2026 CartIntel</span>
+        <div className="footer-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/cartintel-logo.png"
+            alt="CartIntel Logo"
+            className="footer-logo"
+            width={18}
+            height={18}
+          />
+          <span>© 2026 CartIntel</span>
+        </div>
         <div>
           <a href="#features">Features</a>
           <a href="#how-it-works">How It Works</a>

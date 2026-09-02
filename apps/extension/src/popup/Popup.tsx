@@ -138,8 +138,12 @@ export default function Popup() {
   return (
     <div className="w-[380px] bg-gray-50 text-gray-900 font-sans shadow-2xl rounded-2xl overflow-hidden border border-gray-200/50 flex flex-col max-h-[600px]">
       <header className="px-5 py-4 bg-white border-b border-gray-100 flex items-center gap-3 shrink-0">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-inner shadow-blue-800/20">
-          <ShoppingBag className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gray-950 flex items-center justify-center p-2 shadow-inner border border-gray-800">
+          <img
+            src="/assets/cartintel-logo.png"
+            alt="CartIntel"
+            className="w-full h-full object-contain"
+          />
         </div>
         <div>
           <h1 className="text-base font-extrabold tracking-tight text-gray-900 leading-none mb-1">

@@ -150,6 +150,22 @@ button {
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -.04em;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(181, 174, 200, 0.25));
+  transition: transform 0.2s ease, filter 0.2s ease;
+  flex-shrink: 0;
+}
+
+.brand:hover .brand-logo {
+  transform: scale(1.08) rotate(-3deg);
+  filter: drop-shadow(0 0 12px rgba(181, 174, 200, 0.5));
 }
 
 .brand-mark {
@@ -1529,12 +1545,28 @@ button {
   padding: 28px 0 38px;
   border-top: 1px solid var(--border);
   display: flex;
+  align-items: center;
   justify-content: space-between;
   color: var(--text-subtle);
-  font: 10px var(--font-mono);
+  font: 11px var(--font-mono);
 }
 
-.site-footer div {
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.footer-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.site-footer div:last-child {
   display: flex;
   gap: 24px;
 }

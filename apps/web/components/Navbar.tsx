@@ -36,10 +36,17 @@ export default function Navbar() {
         <Link
           href="/"
           onClick={scrollToTop}
-          className="flex items-center gap-2 text-2xl font-bold tracking-tight text-[#F4EEF3] hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-[#F4EEF3] hover:opacity-90 transition-opacity"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/cartintel-logo.png"
+            alt="CartIntel Logo"
+            className="h-7 w-auto object-contain"
+            width={28}
+            height={28}
+          />
           <span>CartIntel</span>
-          <span className="h-1.5 w-1.5 rounded-full bg-[#C982A7] shadow-[0_0_8px_#C982A7]" />
         </Link>
 
         {/* Section Navigation Links */}
