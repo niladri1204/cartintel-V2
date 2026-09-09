@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { searchService } from "../../../server/services/search";
 import type { SearchRequest } from "../../../server/services/search/types";
-import { corsHeaders, rateLimit, readJsonBody, rejectUnauthorizedOrigin } from "../../../server/security/requestSecurity";
+import { sanitizeError } from '../../../utils/apiError';
+import { rejectUnauthorizedOrigin, corsHeaders, rateLimit, readJsonBody } from '../../../server/security/requestSecurity';
 
 const MAX_TEXT = 300;
 const optionalStrings = ["normalizedTitle", "brand", "model", "category", "productType", "variant", "color", "storage", "ram", "googleProductId", "googleImmersiveToken"] as const;
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { headers: corsHeaders(request) });
   } catch (error) {
     console.error("[POST /api/search] failed", error);
-    return NextResponse.json({ error: "Internal server error during search." }, { status: 500, headers: corsHeaders(request) });
+    const { status, body } = sanitizeError(error);
+    return NextResponse.json(body, { status, headers: corsHeaders(request) });
   }
 }

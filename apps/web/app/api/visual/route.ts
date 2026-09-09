@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type, type Schema } from "@google/genai";
 import { fetchSafeImage } from "../../../server/security/imageFetch";
-import { corsHeaders, rateLimit, readJsonBody, rejectUnauthorizedOrigin } from "../../../server/security/requestSecurity";
+import { sanitizeError } from '../../../utils/apiError';
+import { rejectUnauthorizedOrigin, corsHeaders, rateLimit, readJsonBody } from '../../../server/security/requestSecurity';
 
 const MAX_IMAGES = 3;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ...result, confidence: normalizeConfidence(result.confidence), visualAttributes: result.visualAttributes && typeof result.visualAttributes === "object" ? result.visualAttributes : {}, evidence }, { headers: corsHeaders(request) });
   } catch (error) {
     console.error("[POST /api/visual] failed", error);
-    return unavailable("Visual recognition is temporarily unavailable.", request);
+    const { status, body } = sanitizeError(error);
+    return NextResponse.json(body, { status, headers: corsHeaders(request) });
   }
 }

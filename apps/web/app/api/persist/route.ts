@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { intelligencePersistenceService } from "../../../server/services/persistence/intelligencePersistenceService";
-import { corsHeaders, rateLimit, readJsonBody, rejectUnauthorizedOrigin } from "../../../server/security/requestSecurity";
+import { sanitizeError } from '../../../utils/apiError';
+import { rejectUnauthorizedOrigin, corsHeaders, rateLimit, readJsonBody } from '../../../server/security/requestSecurity';
 
 function validPersistenceRequest(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -21,8 +22,9 @@ export async function POST(request: Request) {
   try {
     const result = await intelligencePersistenceService.persistRecommendationTransaction(parsed.value);
     return NextResponse.json(result, { headers: corsHeaders(request) });
-  } catch (error) {
-    console.error("[POST /api/persist] failed", error);
-    return NextResponse.json({ success: false, error: "Persistence is temporarily unavailable." }, { status: 503, headers: corsHeaders(request) });
-  }
+    } catch (error) {
+      console.error("[POST /api/persist] failed", error);
+      const { status, body } = sanitizeError(error);
+      return NextResponse.json(body, { status, headers: corsHeaders(request) });
+    }
 }
