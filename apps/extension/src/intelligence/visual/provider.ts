@@ -1,5 +1,6 @@
 import type { ImageInput, VisualProductRecognitionResult } from "./types";
 import { normalizeVisualConfidence } from "./types";
+import { getApiBaseUrl } from "../../config/api";
 
 export interface VisualRecognitionProvider {
   id: string;
@@ -35,7 +36,6 @@ export class UnavailableVisualProvider implements VisualRecognitionProvider {
   }
 }
 
-const API_BASE_URL = import.meta.env?.VITE_CARTINTEL_API_URL || "http://localhost:3000";
 
 async function imageUrlToBase64(url: string): Promise<{ base64: string; mimeType: string } | null> {
   if (typeof window === "undefined" || typeof FileReader === "undefined") {
@@ -124,7 +124,7 @@ export class GeminiVisualProvider implements VisualRecognitionProvider {
       const timeoutId = setTimeout(() => controller.abort(), 6000);
 
       console.log("[Visual] POST /api/visual");
-      const response = await fetch(`${API_BASE_URL}/api/visual`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/visual`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

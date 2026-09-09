@@ -13,6 +13,7 @@ import { buildExplainableRecommendation } from "./decision/decisionExplanation";
 import { buildRecommendationRequest } from "./intent/recommendationRequestBuilder";
 import { isRefurbishedOrUsedProduct, evaluateVariantState } from "./ranking";
 import { emitOfferTrace } from "../utils/terminalTrace";
+import { getApiBaseUrl } from "../config/api";
 
 function normalizeUrl(u?: string | null): string {
   if (!u) return "";
@@ -259,15 +260,14 @@ export async function compareProduct(
       candidates: recCandidates,
     };
 
-    const recResult = buildExplainableRecommendation(req, recCandidates);
-
-    // 8. Direct Merchant URL Resolution on Final Eligible Offers ONLY
-    //    Enriches missing merchant URLs via at most ONE targeted organic search without altering candidate count
-    const targetOffers = recResult.allEligibleOffers || [];
-    if (targetOffers.length > 0) {
-      await discoveryProvider.resolveMerchantUrls(targetOffers, currentProduct);
+    // 7. Direct Merchant URL Resolution on Matched Candidates
+    //    Enriches missing merchant URLs via at most ONE targeted organic search before final decision
+    if (recCandidates.length > 0) {
+      await discoveryProvider.resolveMerchantUrls(recCandidates, currentProduct);
     }
 
+    // 8. Execute Authoritative Decision Engine Pipeline (Phase 1.12)
+    const recResult = buildExplainableRecommendation(req, recCandidates);
     decisionRecommendation = recResult;
 
     // 9. Asynchronous Persistence Dispatch (Non-blocking Phase 6.3)
@@ -294,9 +294,7 @@ function dispatchPersistenceAsync(
   recResult: RecommendationResult
 ): void {
   try {
-    const API_BASE_URL =
-      (typeof import.meta !== "undefined" && import.meta.env?.VITE_CARTINTEL_API_URL) ||
-      "http://localhost:3000";
+    const baseUrl = getApiBaseUrl();
 
     const offersToPersist: any[] = [];
     const allOffers = recResult.allEligibleOffers || [];
@@ -306,14 +304,18 @@ function dispatchPersistenceAsync(
       if (!p || !p.originalUrl) continue;
 
       let role = "eligible";
-      if (c === recResult.cheapestOffer) role = "cheapest";
+      if (c === recResult.cheapestOffer && c === recResult.bestValueOffer) role = "both";
+      else if (c === recResult.cheapestOffer) role = "cheapest";
       else if (c === recResult.bestValueOffer) role = "best_value";
 
       let hostname = "";
       try {
-        hostname = p.metadata?.hostname || new URL(p.originalUrl).hostname.replace(/^www\./, "");
+        hostname = (
+          p.metadata?.hostname ||
+          new URL(p.originalUrl).hostname
+        ).trim().toLowerCase().replace(/^www\./, "");
       } catch {
-        hostname = p.metadata?.hostname || "";
+        hostname = (p.metadata?.hostname || "").trim().toLowerCase().replace(/^www\./, "");
       }
 
       offersToPersist.push({
@@ -332,8 +334,8 @@ function dispatchPersistenceAsync(
         size: p.size || null,
         originalTitle: p.originalTitle || p.normalizedTitle || "Listing",
         normalizedTitle: p.normalizedTitle || null,
-        originalUrl: p.originalUrl,
-        imageUrl: p.imageUrl || null,
+        originalUrl: p.originalUrl.trim(),
+        imageUrl: p.originalImage ?? null,
         currentPrice: p.originalPrice || 0,
         currency: p.originalCurrency || "INR",
         isAvailable: !c.isUnavailable,
@@ -341,38 +343,44 @@ function dispatchPersistenceAsync(
         qualityScore: c.qualityScore ?? 80,
         marketplaceReliabilityScore: c.marketplaceReliabilityScore ?? 80,
         offerRole: role,
-        rankingTier: c.rankingTier ?? null,
+        rankingTier: null,
         finalScore: c.finalRankingScore ?? null,
       });
     }
 
     let cheapestKey: string | null = null;
     if (recResult.cheapestOffer?.product?.originalUrl) {
-      const cheapUrl = recResult.cheapestOffer.product.originalUrl;
+      const cheapUrl = recResult.cheapestOffer.product.originalUrl.trim();
       try {
-        const cheapHost = recResult.cheapestOffer.product.metadata?.hostname || new URL(cheapUrl).hostname.replace(/^www\./, "");
+        const cheapHost = (
+          recResult.cheapestOffer.product.metadata?.hostname ||
+          new URL(cheapUrl).hostname
+        ).trim().toLowerCase().replace(/^www\./, "");
         cheapestKey = `${cheapHost}|${cheapUrl}`;
       } catch {
-        cheapestKey = null;
+        cheapestKey = cheapUrl;
       }
     }
 
     let bestValueKey: string | null = null;
     if (recResult.bestValueOffer?.product?.originalUrl) {
-      const valUrl = recResult.bestValueOffer.product.originalUrl;
+      const valUrl = recResult.bestValueOffer.product.originalUrl.trim();
       try {
-        const valHost = recResult.bestValueOffer.product.metadata?.hostname || new URL(valUrl).hostname.replace(/^www\./, "");
+        const valHost = (
+          recResult.bestValueOffer.product.metadata?.hostname ||
+          new URL(valUrl).hostname
+        ).trim().toLowerCase().replace(/^www\./, "");
         bestValueKey = `${valHost}|${valUrl}`;
       } catch {
-        bestValueKey = null;
+        bestValueKey = valUrl;
       }
     }
 
     const payload = {
       sessionToken: `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       queryText: currentProduct.normalizedTitle || currentProduct.originalTitle || "",
-      status: recResult.status || "completed",
-      confidence: recResult.confidence || 90,
+      status: "recommended",
+      confidence: recResult.confidenceDetails?.score != null ? Math.round(recResult.confidenceDetails.score * 100) : 100,
       decisionReasons: recResult.reasons || [],
       tradeOffs: recResult.tradeOffs || [],
       anchorProduct: {
@@ -386,8 +394,8 @@ function dispatchPersistenceAsync(
         storage: currentProduct.storage || null,
         ram: currentProduct.ram || null,
         size: currentProduct.size || null,
-        volumeValue: currentProduct.volumeValue || null,
-        volumeUnit: currentProduct.volumeUnit || null,
+        volumeValue: currentProduct.quantity ?? null,
+        volumeUnit: currentProduct.unit ?? null,
         packCount: currentProduct.packCount || 1,
       },
       offers: offersToPersist,
@@ -396,7 +404,7 @@ function dispatchPersistenceAsync(
     };
 
     if (typeof fetch !== "undefined") {
-      fetch(`${API_BASE_URL}/api/persist`, {
+      fetch(`${baseUrl}/api/persist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

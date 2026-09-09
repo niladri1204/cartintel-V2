@@ -1,9 +1,12 @@
 /// <reference types="vite/client" />
-
-const API_BASE_URL =
-  import.meta.env?.VITE_CARTINTEL_API_URL || "http://localhost:3000";
+import { getApiBaseUrl } from "../config/api";
 
 export function emitOfferTrace(stage: string, rawItems: any[], printDetails = false): void {
+  // In production builds, skip verbose debug traces and disable /api/log-trace network requests.
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
   const prods = rawItems.map(item => item?.product || item).filter(Boolean);
   const count = rawItems.length;
   const merchants = Array.from(new Set(prods.map(p => p?.metadata?.marketplace || (p as any)?.source || "unknown").filter(Boolean)));
@@ -36,14 +39,15 @@ export function emitOfferTrace(stage: string, rawItems: any[], printDetails = fa
     }
   }
 
-  // 1. Browser Console
+  // 1. Browser Console (Development only)
   for (const line of lines) {
     console.log(line);
   }
 
-  // 2. Terminal Output (via background fetch)
+  // 2. Terminal Output (via background fetch, Development only)
   try {
-    fetch(`${API_BASE_URL}/api/log-trace`, {
+    const baseUrl = getApiBaseUrl();
+    fetch(`${baseUrl}/api/log-trace`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ logs: lines }),

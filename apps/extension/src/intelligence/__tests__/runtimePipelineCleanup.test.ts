@@ -58,7 +58,7 @@ describe("Phase 4.12.1 — Runtime Pipeline Cleanup", () => {
       confidence: 95,
       fingerprint: "apple-iphone-16-128gb",
       source: "Apple Store",
-      originalUrl: "",
+      originalUrl: "https://www.apple.com/in/shop/buy-iphone/iphone-16-pink",
       metadata: { marketplace: "Apple Store", hostname: "apple.com", detectedAt: Date.now() },
     },
     {
@@ -72,7 +72,7 @@ describe("Phase 4.12.1 — Runtime Pipeline Cleanup", () => {
       confidence: 95,
       fingerprint: "apple-iphone-16-128gb",
       source: "iCrescent",
-      originalUrl: "",
+      originalUrl: "https://icrescent.com/iphone-16-white",
       metadata: { marketplace: "iCrescent", hostname: "icrescent.com", detectedAt: Date.now() },
     },
   ];
@@ -143,8 +143,8 @@ describe("Phase 4.12.1 — Runtime Pipeline Cleanup", () => {
     expect(recResult.allEligibleOffers!.length).toBe(sampleProducts.length);
   });
 
-  // Test 4: URL enrichment changes originalUrl but not offer count/order/selection
-  test("4. URL enrichment changes originalUrl but not offer count/order/selection", () => {
+  // Test 4: URL preservation ensures direct verified merchant URLs on final offers
+  test("4. URL preservation ensures direct verified merchant URLs on final offers", () => {
     const candidates = buildCandidates(sampleProducts);
     const req = {
       ...buildRecommendationRequest(currentProduct.normalizedTitle || ""),
@@ -156,17 +156,12 @@ describe("Phase 4.12.1 — Runtime Pipeline Cleanup", () => {
     const initialOfferCount = initialOffers.length;
     const initialBestOfferPrice = recResult.bestOffer?.product.originalPrice;
 
-    // Simulate URL enrichment on final offers
     const appleOffer = recResult.allEligibleOffers!.find(o => o.product.metadata?.marketplace === "Apple Store");
-    expect(appleOffer?.product.originalUrl).toBe("");
-    if (appleOffer) {
-      appleOffer.product.originalUrl = "https://www.apple.com/in/shop/buy-iphone/iphone-16";
-    }
+    expect(appleOffer?.product.originalUrl).toBe("https://www.apple.com/in/shop/buy-iphone/iphone-16-pink");
 
     // Verify count, order, and bestOffer selection did not change
     expect(recResult.allEligibleOffers!.length).toBe(initialOfferCount);
     expect(recResult.bestOffer?.product.originalPrice).toBe(initialBestOfferPrice);
-    expect(appleOffer?.product.originalUrl).toBe("https://www.apple.com/in/shop/buy-iphone/iphone-16");
   });
 
   // Test 5: iCrescent cannot receive Apple.com URL

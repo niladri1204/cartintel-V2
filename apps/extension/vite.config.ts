@@ -10,6 +10,6 @@ export default defineConfig({
     crx({ manifest }),
   ],
   build: {
-    emptyOutDir: false,
+    emptyOutDir: true,
   },
 })

@@ -291,7 +291,13 @@ export function validatePersistencePayload(raw: any): ValidatedPersistencePayloa
     tradeOffs: raw.tradeOffs || null,
     anchorProduct: validatedAnchor,
     offers: validatedOffers,
-    cheapestOfferMatchKey: raw.cheapestOfferMatchKey || null,
-    bestValueOfferMatchKey: raw.bestValueOfferMatchKey || null,
+    cheapestOfferMatchKey:
+      typeof raw.cheapestOfferMatchKey === "string" && raw.cheapestOfferMatchKey.trim().length > 0
+        ? raw.cheapestOfferMatchKey.trim()
+        : null,
+    bestValueOfferMatchKey:
+      typeof raw.bestValueOfferMatchKey === "string" && raw.bestValueOfferMatchKey.trim().length > 0
+        ? raw.bestValueOfferMatchKey.trim()
+        : null,
   };
 }

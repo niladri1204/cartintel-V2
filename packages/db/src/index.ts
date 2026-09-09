@@ -31,7 +31,11 @@ if (!process.env.DATABASE_URL) {
   loadEnv();
 }
 
-const connectionString = process.env.DATABASE_URL || "";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL is required to initialize the CartIntel database client.");
+}
 
 // Create postgres client for queries
 export const client = postgres(connectionString, {

@@ -121,21 +121,22 @@ describe("Phase 6.3 — PostgreSQL Real Intelligence Persistence Suite", () => {
     expect(result.sessionId).toBeDefined();
     expect(result.persistedOffersCount).toBe(2);
 
-    // Verify session record in database
-    const session = await db
-      .select()
-      .from(recommendationSessions)
-      .where(eq(recommendationSessions.id, result.sessionId!));
-    expect(session.length).toBe(1);
-    expect(session[0].confidence).toBe(95);
-    expect(session[0].cheapestOfferId).toBeDefined();
-
     // Verify initial price history was created
     const offerRows = await db
       .select()
       .from(offers)
       .where(eq(offers.originalUrl, `https://amazon-test-${testRunId}.in/dp/B0TESTMARS`));
     expect(offerRows.length).toBe(1);
+
+    // Verify session record in database and strict non-null foreign key
+    const session = await db
+      .select()
+      .from(recommendationSessions)
+      .where(eq(recommendationSessions.id, result.sessionId!));
+    expect(session.length).toBe(1);
+    expect(session[0].confidence).toBe(95);
+    expect(session[0].cheapestOfferId).toBe(offerRows[0].id);
+    expect(session[0].bestValueOfferId).toBeNull();
 
     const priceHistories = await db
       .select()
@@ -145,7 +146,7 @@ describe("Phase 6.3 — PostgreSQL Real Intelligence Persistence Suite", () => {
     expect(Number(priceHistories[0].price)).toBe(329);
   });
 
-  test("3. Idempotency: Repeated persistence of identical payload creates 0 duplicate rows", async () => {
+  test("3. Idempotency: Repeated persistence of identical payload creates 0 duplicate rows and preserves winner IDs", async () => {
     const payload = {
       sessionToken: `sess_idempotent_${testRunId}`,
       queryText: "MARS Candylicious Coloured Lip Balm",
@@ -173,6 +174,7 @@ describe("Phase 6.3 — PostgreSQL Real Intelligence Persistence Suite", () => {
           currentPrice: 349,
           currency: "INR",
           isAvailable: true,
+          offerRole: "cheapest",
         },
       ],
     };
@@ -197,6 +199,12 @@ describe("Phase 6.3 — PostgreSQL Real Intelligence Persistence Suite", () => {
       .from(offers)
       .where(eq(offers.originalUrl, `https://${testMerchantHost}/p/mars-lip-balm`));
     expect(offerRecords.length).toBe(1);
+
+    // Both sessions reference the same persisted offer row
+    const sess1 = await db.select().from(recommendationSessions).where(eq(recommendationSessions.id, res1.sessionId!));
+    const sess2 = await db.select().from(recommendationSessions).where(eq(recommendationSessions.id, res2.sessionId!));
+    expect(sess1[0].cheapestOfferId).toBe(offerRecords[0].id);
+    expect(sess2[0].cheapestOfferId).toBe(offerRecords[0].id);
 
     // Price unchanged -> Price history rows MUST remain 1
     const historyRows = await db
@@ -387,5 +395,255 @@ describe("Phase 6.3 — PostgreSQL Real Intelligence Persistence Suite", () => {
     const res = await intelligencePersistenceService.persistRecommendationTransaction(invalidPayload);
     expect(res.success).toBe(false);
     expect(res.error).toBeDefined();
+  });
+
+  test("8. Regression A & B & D: Cheapest and Best Value winner IDs persisted and match recommendation_offers", async () => {
+    const cheapUrl = `https://myntra-test-${testRunId}.com/p/cheap-winner`;
+    const bestValueUrl = `https://amazon-test-${testRunId}.in/p/best-value-winner`;
+
+    const payload = {
+      sessionToken: `sess_winners_${testRunId}`,
+      queryText: "Premium Cotton T-Shirt",
+      status: "completed",
+      confidence: 90,
+      anchorProduct: {
+        brandName: `Brand Test ${testRunId}`,
+        productTitle: "Premium Cotton T-Shirt",
+        normalizedModel: "cotton t-shirt",
+        category: "Clothing",
+        canonicalFingerprint: `brand|cotton t-shirt|${testRunId}`,
+      },
+      offers: [
+        {
+          merchantName: "Myntra",
+          merchantHostname: `myntra-test-${testRunId}.com`,
+          merchantDomain: `myntra-test-${testRunId}.com`,
+          brandName: `Brand Test ${testRunId}`,
+          productTitle: "Premium Cotton T-Shirt - Cheap",
+          normalizedModel: "cotton t-shirt",
+          category: "Clothing",
+          canonicalFingerprint: `brand|cotton t-shirt|${testRunId}`,
+          originalTitle: "Premium Cotton T-Shirt - Myntra",
+          originalUrl: cheapUrl,
+          currentPrice: 387,
+          currency: "INR",
+          isAvailable: true,
+          offerRole: "cheapest",
+          finalScore: 95,
+        },
+        {
+          merchantName: "Amazon",
+          merchantHostname: `amazon-test-${testRunId}.in`,
+          merchantDomain: `amazon-test-${testRunId}.in`,
+          brandName: `Brand Test ${testRunId}`,
+          productTitle: "Premium Cotton T-Shirt - Best Value",
+          normalizedModel: "cotton t-shirt",
+          category: "Clothing",
+          canonicalFingerprint: `brand|cotton t-shirt|${testRunId}`,
+          originalTitle: "Premium Cotton T-Shirt - Amazon",
+          originalUrl: bestValueUrl,
+          currentPrice: 499,
+          currency: "INR",
+          isAvailable: true,
+          offerRole: "best_value",
+          finalScore: 98,
+        },
+      ],
+      // Simulate casing / unnormalized hostname match keys from client
+      cheapestOfferMatchKey: `Myntra-Test-${testRunId}.com|${cheapUrl}`,
+      bestValueOfferMatchKey: `Amazon-Test-${testRunId}.in|${bestValueUrl}`,
+    };
+
+    const res = await intelligencePersistenceService.persistRecommendationTransaction(payload);
+    expect(res.success).toBe(true);
+
+    const [sessionRecord] = await db
+      .select()
+      .from(recommendationSessions)
+      .where(eq(recommendationSessions.id, res.sessionId!));
+
+    const offerRecords = await db
+      .select()
+      .from(recommendationOffers)
+      .where(eq(recommendationOffers.sessionId, res.sessionId!));
+
+    expect(offerRecords.length).toBe(2);
+
+    const cheapOfferAssoc = offerRecords.find((o) => o.offerRole === "cheapest");
+    const bestValueOfferAssoc = offerRecords.find((o) => o.offerRole === "best_value");
+
+    expect(cheapOfferAssoc).toBeDefined();
+    expect(bestValueOfferAssoc).toBeDefined();
+
+    // Regression A & B: Foreign keys must strictly match the persisted offers
+    expect(sessionRecord.cheapestOfferId).toBe(cheapOfferAssoc!.offerId);
+    expect(sessionRecord.bestValueOfferId).toBe(bestValueOfferAssoc!.offerId);
+
+    // Regression D: Both recommendation_offers and recommendation_sessions reference the exact same offers row
+    const cheapOfferDb = await db.select().from(offers).where(eq(offers.id, sessionRecord.cheapestOfferId!));
+    expect(cheapOfferDb.length).toBe(1);
+    expect(cheapOfferDb[0].originalUrl).toBe(cheapUrl);
+    expect(Number(cheapOfferDb[0].currentPrice)).toBe(387);
+  });
+
+  test("9. Regression C: NULL remains when no winner exists or no match key/role exists", async () => {
+    const payload = {
+      sessionToken: `sess_nowinners_${testRunId}`,
+      status: "completed",
+      confidence: 80,
+      anchorProduct: {
+        brandName: `Brand Test ${testRunId}`,
+        productTitle: "Generic Shoes",
+        normalizedModel: "shoes",
+        category: "Footwear",
+        canonicalFingerprint: `brand|shoes|${testRunId}`,
+      },
+      offers: [
+        {
+          merchantName: `Zepto Test ${testRunId}`,
+          merchantHostname: testMerchantHost,
+          merchantDomain: testMerchantHost,
+          productTitle: "Generic Shoes",
+          normalizedModel: "shoes",
+          category: "Footwear",
+          canonicalFingerprint: `brand|shoes|${testRunId}`,
+          originalTitle: "Generic Shoes - Zepto",
+          originalUrl: `https://${testMerchantHost}/p/shoes`,
+          currentPrice: 999,
+          currency: "INR",
+          isAvailable: true,
+          offerRole: "eligible", // Neither cheapest nor best_value
+        },
+      ],
+      cheapestOfferMatchKey: null as string | null,
+      bestValueOfferMatchKey: null as string | null,
+    };
+
+    const res = await intelligencePersistenceService.persistRecommendationTransaction(payload);
+    expect(res.success).toBe(true);
+
+    const [sessionRecord] = await db
+      .select()
+      .from(recommendationSessions)
+      .where(eq(recommendationSessions.id, res.sessionId!));
+
+    expect(sessionRecord.cheapestOfferId).toBeNull();
+    expect(sessionRecord.bestValueOfferId).toBeNull();
+  });
+
+  test("10. Regression F: Role-based fallback works when match keys are absent", async () => {
+    const cheapUrl = `https://${testMerchantHost}/p/only-role-cheap`;
+    const payload = {
+      sessionToken: `sess_role_fallback_${testRunId}`,
+      status: "completed",
+      confidence: 85,
+      anchorProduct: {
+        brandName: `Brand Test ${testRunId}`,
+        productTitle: "Role Fallback Item",
+        normalizedModel: "item",
+        category: "General",
+        canonicalFingerprint: `brand|item|${testRunId}`,
+      },
+      offers: [
+        {
+          merchantName: `Zepto Test ${testRunId}`,
+          merchantHostname: testMerchantHost,
+          merchantDomain: testMerchantHost,
+          productTitle: "Role Fallback Item",
+          normalizedModel: "item",
+          category: "General",
+          canonicalFingerprint: `brand|item|${testRunId}`,
+          originalTitle: "Role Fallback Item",
+          originalUrl: cheapUrl,
+          currentPrice: 199,
+          currency: "INR",
+          isAvailable: true,
+          offerRole: "cheapest",
+        },
+      ],
+      // Omit match keys completely
+      cheapestOfferMatchKey: null as string | null,
+      bestValueOfferMatchKey: null as string | null,
+    };
+
+    const res = await intelligencePersistenceService.persistRecommendationTransaction(payload);
+    expect(res.success).toBe(true);
+
+    const [sessionRecord] = await db
+      .select()
+      .from(recommendationSessions)
+      .where(eq(recommendationSessions.id, res.sessionId!));
+
+    const [persistedOffer] = await db
+      .select()
+      .from(offers)
+      .where(eq(offers.originalUrl, cheapUrl));
+
+    expect(sessionRecord.cheapestOfferId).toBe(persistedOffer.id);
+    expect(sessionRecord.bestValueOfferId).toBeNull();
+  });
+
+  test("11. Constraint 1 & 2: Ambiguous URL lookup or ambiguous role fallback fails safely to NULL without guessing", async () => {
+    const sharedUrl = `https://${testMerchantHost}/p/shared-url`;
+
+    const payload = {
+      sessionToken: `sess_ambiguity_${testRunId}`,
+      status: "completed",
+      confidence: 80,
+      anchorProduct: {
+        brandName: `Brand Test ${testRunId}`,
+        productTitle: "Ambiguity Test Item",
+        normalizedModel: "item",
+        category: "General",
+        canonicalFingerprint: `brand|ambiguity|${testRunId}`,
+      },
+      offers: [
+        {
+          merchantName: `Merchant A ${testRunId}`,
+          merchantHostname: `merch-a-${testRunId}.com`,
+          merchantDomain: `merch-a-${testRunId}.com`,
+          productTitle: "Item Seller A",
+          normalizedModel: "item",
+          category: "General",
+          canonicalFingerprint: `brand|ambiguity-a|${testRunId}`,
+          originalTitle: "Item A",
+          originalUrl: sharedUrl, // Duplicate URL across distinct merchants
+          currentPrice: 200,
+          currency: "INR",
+          isAvailable: true,
+          offerRole: "cheapest", // Multiple offers have cheapest role (ambiguous role fallback)
+        },
+        {
+          merchantName: `Merchant B ${testRunId}`,
+          merchantHostname: `merch-b-${testRunId}.com`,
+          merchantDomain: `merch-b-${testRunId}.com`,
+          productTitle: "Item Seller B",
+          normalizedModel: "item",
+          category: "General",
+          canonicalFingerprint: `brand|ambiguity-b|${testRunId}`,
+          originalTitle: "Item B",
+          originalUrl: sharedUrl, // Duplicate URL across distinct merchants
+          currentPrice: 200,
+          currency: "INR",
+          isAvailable: true,
+          offerRole: "cheapest", // Multiple offers have cheapest role (ambiguous role fallback)
+        },
+      ],
+      // URL-only key with multiple candidate offers sharing the URL -> Must not blindly pick one
+      cheapestOfferMatchKey: sharedUrl,
+      bestValueOfferMatchKey: null as string | null,
+    };
+
+    const res = await intelligencePersistenceService.persistRecommendationTransaction(payload);
+    expect(res.success).toBe(true);
+
+    const [sessionRecord] = await db
+      .select()
+      .from(recommendationSessions)
+      .where(eq(recommendationSessions.id, res.sessionId!));
+
+    // Because URL maps to 2 offers and role fallback has 2 candidates with "cheapest", it must safely remain NULL
+    expect(sessionRecord.cheapestOfferId).toBeNull();
+    expect(sessionRecord.bestValueOfferId).toBeNull();
   });
 });

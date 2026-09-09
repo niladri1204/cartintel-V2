@@ -96,15 +96,15 @@ describe("Phase 4.6.1 — ALL AVAILABLE OFFERS Section & Contract Tests", () => 
   const candidates = [candAmazon, candZepto, candMyGNoUrl];
   const request: RecommendationRequest = { candidates };
 
-  // Test 1: All eligible offers render in the contract array.
-  test("1. All eligible offers render in decision result contract array", () => {
+  // Test 1: All verified actionable offers render in the contract array.
+  test("1. All verified actionable offers render in decision result contract array", () => {
     const result = buildExplainableRecommendation(request, candidates);
 
     expect(result.allOffers).toBeDefined();
-    expect(result.allOffers).toHaveLength(3);
+    expect(result.allOffers).toHaveLength(2);
     expect(result.allOffers).toContain(candAmazon);
     expect(result.allOffers).toContain(candZepto);
-    expect(result.allOffers).toContain(candMyGNoUrl);
+    expect(result.allOffers).not.toContain(candMyGNoUrl);
   });
 
   // Test 2: Merchant name, price, and currency render correctly in candidate data.
@@ -128,13 +128,13 @@ describe("Phase 4.6.1 — ALL AVAILABLE OFFERS Section & Contract Tests", () => 
     expect(zeptoOffer?.product?.originalUrl).toBe("https://zepto.in/p/zepto-15r");
   });
 
-  // Test 4: Missing URL hides the CTA safely without throwing or fabricating URLs.
-  test("4. Missing URL is handled safely (null/empty originalUrl)", () => {
+  // Test 4: Missing URL excludes candidate from actionable offers without throwing or fabricating URLs.
+  test("4. Missing URL excludes candidate from actionable offers safely (null/empty originalUrl)", () => {
     const result = buildExplainableRecommendation(request, candidates);
     const myGOffer = result.allOffers?.find(c => c.product?.metadata?.marketplace === "MyG");
 
-    expect(myGOffer).toBeDefined();
-    expect(myGOffer?.product?.originalUrl).toBeNull();
+    expect(myGOffer).toBeUndefined();
+    expect(result.cheapestOffer).toBe(candZepto);
   });
 
   // Test 5: Input/result immutability and deterministic rendering.

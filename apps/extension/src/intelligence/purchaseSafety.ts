@@ -100,7 +100,14 @@ export function validatePurchaseUrlSafety(
     const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
 
     // Verify search proxy wrapper was completely unwrapped
-    if (hostname.includes("google.com") || hostname.includes("google.co.in") || hostname.includes("serper.dev")) {
+    const isSearchProxy =
+      hostname === "google.com" ||
+      hostname === "google.co.in" ||
+      (hostname.endsWith(".google.com") && !hostname.startsWith("store.google.")) ||
+      (hostname.endsWith(".google.co.in") && !hostname.startsWith("store.google.")) ||
+      hostname.includes("serper.dev");
+
+    if (isSearchProxy) {
       return {
         isValid: false,
         sanitizedUrl: sanitized,

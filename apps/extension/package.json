@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc -b --noEmit"
   },
   "dependencies": {
     "react": "^19.2.8",

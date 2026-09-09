@@ -9,10 +9,7 @@ import type {
   SearchResult,
   ProviderError,
 } from "./types";
-
-// Safe development default, overrideable by Vite environment variables
-const API_BASE_URL =
-  import.meta.env?.VITE_CARTINTEL_API_URL || "http://localhost:3000";
+import { getApiBaseUrl } from "../../config/api";
 
 export class CartIntelDiscoveryProvider implements SearchProvider {
   readonly name = "cartintel-backend-discovery";
@@ -21,7 +18,7 @@ export class CartIntelDiscoveryProvider implements SearchProvider {
     // Note: request.maxResults is currently not exposed or handled by the backend /api/search contract,
     // so it is intentionally left unused in this adapter to avoid inventing backend behavior.
 
-    const endpoint = `${API_BASE_URL}/api/search`;
+    const endpoint = `${getApiBaseUrl()}/api/search`;
     const abortController = new AbortController();
     const timeout = setTimeout(() => abortController.abort(), 8000); // 8 second timeout
 
@@ -152,7 +149,7 @@ export class CartIntelDiscoveryProvider implements SearchProvider {
         })),
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/search/resolve-urls`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/search/resolve-urls`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

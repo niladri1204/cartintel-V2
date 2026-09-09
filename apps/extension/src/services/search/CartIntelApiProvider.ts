@@ -1,15 +1,13 @@
 /// <reference types="vite/client" />
 import type { SearchProvider, SearchRequest, RawProductResult, SearchResult } from "./types";
-
-// Safe development default, overrideable by Vite environment variables
-const API_BASE_URL = import.meta.env?.VITE_CARTINTEL_API_URL || "http://localhost:3000";
+import { getApiBaseUrl } from "../../config/api";
 
 export class CartIntelApiProvider implements SearchProvider {
   readonly id = "cartintel-backend-api";
   private readonly endpoint: string;
 
   constructor() {
-    this.endpoint = `${API_BASE_URL}/api/search`;
+    this.endpoint = `${getApiBaseUrl()}/api/search`;
   }
 
   async search(request: SearchRequest): Promise<RawProductResult[]> {

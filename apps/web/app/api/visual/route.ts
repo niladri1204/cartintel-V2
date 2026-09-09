@@ -1,205 +1,67 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Type, type Schema } from "@google/genai";
+import { fetchSafeImage } from "../../../server/security/imageFetch";
+import { corsHeaders, rateLimit, readJsonBody, rejectUnauthorizedOrigin } from "../../../server/security/requestSecurity";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+const MAX_IMAGES = 3;
+const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
+const supportedMediaTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const statuses = ["recognized", "partially_recognized", "uncertain", "unknown", "unavailable"] as const;
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
+const responseSchema: Schema = { type: Type.OBJECT, properties: { status: { type: Type.STRING }, category: { type: Type.STRING }, brand: { type: Type.STRING }, model: { type: Type.STRING }, productType: { type: Type.STRING }, visualAttributes: { type: Type.OBJECT, properties: { color: { type: Type.STRING }, shape: { type: Type.STRING }, design: { type: Type.STRING }, material: { type: Type.STRING }, formFactor: { type: Type.STRING }, visualCategory: { type: Type.STRING }, accessories: { type: Type.ARRAY, items: { type: Type.STRING } } } }, confidence: { type: Type.NUMBER }, evidence: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { source: { type: Type.STRING }, description: { type: Type.STRING }, confidence: { type: Type.NUMBER } }, required: ["source", "description"] } } }, required: ["status", "visualAttributes", "evidence"] };
+const prompt = "Analyze the provided product image(s). Identify product category, brand, model, product type, and visible visual attributes. Return structured evidence. Do not invent specifications not visible in the image; use null for unobservable details. If images conflict, use partially_recognized or uncertain.";
+
+type ImageRequest = { url?: unknown; base64?: unknown; mimeType?: unknown };
+type Recognition = { status: string; category?: unknown; brand?: unknown; model?: unknown; productType?: unknown; visualAttributes?: unknown; confidence?: unknown; evidence?: unknown };
+
+function normalizeConfidence(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return value > 0 && value <= 1 ? Math.round(value * 100) : Math.min(100, Math.max(0, Math.round(value)));
+}
+function validImage(image: unknown): image is ImageRequest {
+  if (!image || typeof image !== "object" || Array.isArray(image)) return false;
+  const item = image as ImageRequest;
+  const urlValid = typeof item.url === "string" && item.url.length > 0 && item.url.length <= 2048;
+  const base64Valid = typeof item.base64 === "string" && item.base64.length > 0 && item.base64.length <= Math.ceil(MAX_INLINE_IMAGE_BYTES * 4 / 3) + 8 && typeof item.mimeType === "string" && supportedMediaTypes.has(item.mimeType.toLowerCase());
+  return urlValid || base64Valid;
+}
+function unavailable(error: string, request: Request, status = 200) {
+  return NextResponse.json({ status: "unavailable", category: null, brand: null, model: null, productType: null, visualAttributes: {}, confidence: null, evidence: [{ source: "other", description: error }] }, { status, headers: corsHeaders(request) });
 }
 
-const responseSchema: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    status: {
-      type: Type.STRING,
-      description: "Must be one of: recognized, partially_recognized, uncertain, unknown, unavailable"
-    },
-    category: { type: Type.STRING },
-    brand: { type: Type.STRING },
-    model: { type: Type.STRING },
-    productType: { type: Type.STRING },
-    visualAttributes: {
-      type: Type.OBJECT,
-      properties: {
-        color: { type: Type.STRING },
-        shape: { type: Type.STRING },
-        design: { type: Type.STRING },
-        material: { type: Type.STRING },
-        formFactor: { type: Type.STRING },
-        visualCategory: { type: Type.STRING },
-        accessories: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      }
-    },
-    confidence: { type: Type.NUMBER },
-    evidence: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          source: {
-            type: Type.STRING,
-            description: "Must be one of: text, logo, shape, layout, ocr, model_features, other"
-          },
-          description: { type: Type.STRING },
-          confidence: { type: Type.NUMBER }
-        },
-        required: ["source", "description"]
-      }
-    }
-  },
-  required: ["status", "visualAttributes", "evidence"]
-};
+export async function OPTIONS(request: Request) {
+  const rejected = rejectUnauthorizedOrigin(request);
+  return rejected ?? new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+}
 
-const prompt = `Analyze the provided product image(s). Identify and return the product category, brand, model, and visible product type.
-Extract visible visual attributes like color, shape, design, material, form factor, and any visible accessories.
-Provide structured evidence for each classification from the image (e.g. OCR text, logo branding, model features).
-
-CRITICAL ANTI-HALLUCINATION RULES:
-1. Do NOT invent specifications that are not visible in the image. E.g. do not guess RAM, storage size, battery capacity, or internal components unless they are explicitly printed on the packaging, label, or readable text in the image.
-2. If specifications or details are not visible, set their values to null.
-3. If multiple images are provided, combine their evidence. If they conflict, set status to 'partially_recognized' or 'uncertain' and explain the conflict.
-`;
-
-export async function POST(req: Request) {
-  console.log("[Visual] backend received request");
+export async function POST(request: Request) {
+  const rejected = rejectUnauthorizedOrigin(request); if (rejected) return rejected;
+  const limited = await rateLimit(request, "visual"); if (limited) return limited;
+  const parsed = await readJsonBody(request, 16 * 1024 * 1024); if ("error" in parsed) return parsed.error;
+  if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return NextResponse.json({ error: "Invalid visual request." }, { status: 400, headers: corsHeaders(request) });
+  const images = (parsed.value as { images?: unknown }).images;
+  if (!Array.isArray(images) || images.length === 0 || images.length > MAX_IMAGES || !images.every(validImage)) return NextResponse.json({ error: "images must contain one to three valid image inputs." }, { status: 400, headers: corsHeaders(request) });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "Visual recognition is not configured." }, { status: 503, headers: corsHeaders(request) });
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Gemini API Key is not configured on the backend." },
-        { status: 503, headers: corsHeaders }
-      );
+    const contents = [prompt] as Array<string | { inlineData: { data: string; mimeType: string } }>;
+    for (const image of images) {
+      if (typeof image.base64 === "string" && typeof image.mimeType === "string") contents.push({ inlineData: { data: image.base64, mimeType: image.mimeType.toLowerCase() } });
+      else if (typeof image.url === "string") {
+        const safeImage = await fetchSafeImage(image.url);
+        contents.push({ inlineData: { data: safeImage.base64, mimeType: safeImage.mimeType } });
+      }
     }
-
-    const { images } = await req.json();
-    if (!images || !Array.isArray(images) || images.length === 0) {
-      return NextResponse.json(
-        { error: "Invalid request: 'images' must be a non-empty array." },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
+    if (contents.length === 1) return NextResponse.json({ error: "No valid image data could be processed." }, { status: 400, headers: corsHeaders(request) });
     const ai = new GoogleGenAI({ apiKey });
-    const contents: any[] = [prompt];
-
-    // Format up to 3 images for the multimodal request
-    const cappedImages = images.slice(0, 3);
-    for (const img of cappedImages) {
-      if (img.base64 && img.mimeType) {
-        contents.push({
-          inlineData: {
-            data: img.base64,
-            mimeType: img.mimeType
-          }
-        });
-      } else if (img.url) {
-        try {
-          const res = await fetch(img.url);
-          const buf = await res.arrayBuffer();
-          const mimeType = res.headers.get("content-type") || "image/jpeg";
-          const base64 = Buffer.from(buf).toString("base64");
-          contents.push({
-            inlineData: {
-              data: base64,
-              mimeType
-            }
-          });
-        } catch (fetchError) {
-          console.error("Failed to fetch image URL inside backend API:", img.url, fetchError);
-        }
-      }
-    }
-
-    if (contents.length === 1) {
-      return NextResponse.json(
-        { error: "No valid image data could be processed." },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
-function normalizeVisualConfidence(val: unknown): number | null {
-  if (val == null || typeof val !== "number" || isNaN(val)) return null;
-  if (val <= 1.0 && val > 0) {
-    return Math.round(val * 100);
-  }
-  return Math.min(100, Math.max(0, Math.round(val)));
-}
-
-    const modelName = process.env.GEMINI_VISION_MODEL || "gemini-2.0-flash";
-    console.log("[Visual] Gemini request started with model:", modelName);
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema
-      }
-    });
-
-    console.log("[Visual] Gemini response received");
-    const text = response.text;
-    if (!text) {
-      throw new Error("Empty response from Gemini API.");
-    }
-
-    const recognitionResult = JSON.parse(text);
-    console.log(
-      "[Visual] recognition status/category/brand/model:",
-      recognitionResult.status,
-      recognitionResult.category,
-      recognitionResult.brand,
-      recognitionResult.model
-    );
-
-    // Validate structured response
-    const validStatus = ["recognized", "partially_recognized", "uncertain", "unknown", "unavailable"];
-    if (!recognitionResult || !validStatus.includes(recognitionResult.status)) {
-      throw new Error("Invalid recognition status returned by Gemini.");
-    }
-
-    // Canonical confidence normalization (0.0–1.0 -> 0–100)
-    recognitionResult.confidence = normalizeVisualConfidence(recognitionResult.confidence);
-
-    // Populate default structures if missing
-    if (!recognitionResult.visualAttributes) {
-      recognitionResult.visualAttributes = {};
-    }
-    if (!Array.isArray(recognitionResult.evidence)) {
-      recognitionResult.evidence = [];
-    } else {
-      recognitionResult.evidence = recognitionResult.evidence.map((ev: any) => ({
-        ...ev,
-        confidence: normalizeVisualConfidence(ev.confidence)
-      }));
-    }
-
-    return NextResponse.json(recognitionResult, { headers: corsHeaders });
+    const response = await ai.models.generateContent({ model: process.env.GEMINI_VISION_MODEL || "gemini-2.0-flash", contents, config: { responseMimeType: "application/json", responseSchema } });
+    if (!response.text) throw new Error("empty Gemini response");
+    const result: Recognition = JSON.parse(response.text);
+    if (!result || !statuses.includes(result.status as typeof statuses[number])) throw new Error("invalid Gemini response");
+    const evidence = Array.isArray(result.evidence) ? result.evidence.filter((item): item is Record<string, unknown> => !!item && typeof item === "object" && !Array.isArray(item)).slice(0, 20).map((item) => ({ source: typeof item.source === "string" ? item.source.slice(0, 40) : "other", description: typeof item.description === "string" ? item.description.slice(0, 500) : "", confidence: normalizeConfidence(item.confidence) })) : [];
+    return NextResponse.json({ ...result, confidence: normalizeConfidence(result.confidence), visualAttributes: result.visualAttributes && typeof result.visualAttributes === "object" ? result.visualAttributes : {}, evidence }, { headers: corsHeaders(request) });
   } catch (error) {
-    console.error("Visual API Error:", error);
-    return NextResponse.json(
-      {
-        status: "unavailable",
-        category: null,
-        brand: null,
-        model: null,
-        productType: null,
-        visualAttributes: {},
-        confidence: null,
-        evidence: [
-          {
-            source: "other",
-            description: `Backend visual service error: ${error instanceof Error ? error.message : String(error)}`
-          }
-        ]
-      },
-      { status: 200, headers: corsHeaders }
-    );
+    console.error("[POST /api/visual] failed", error);
+    return unavailable("Visual recognition is temporarily unavailable.", request);
   }
 }

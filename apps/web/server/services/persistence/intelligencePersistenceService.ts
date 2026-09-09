@@ -96,6 +96,11 @@ export class IntelligencePersistenceService {
 
         // 4. Persist Candidate Offers & Merchants
         const offerIdMap = new Map<string, string>();
+        const urlToOfferIdsMap = new Map<string, Set<string>>();
+        const persistedOfferIds = new Set<string>();
+        const cheapestRoleOfferIds: string[] = [];
+        const bestValueRoleOfferIds: string[] = [];
+
         const offerAssociations: Array<{
           offerId: string;
           offerRole: string;
@@ -183,28 +188,112 @@ export class IntelligencePersistenceService {
             merchantSku: o.merchantSku,
           });
 
-          const matchKey = `${o.merchantHostname}|${o.originalUrl}`;
-          offerIdMap.set(matchKey, offerResult.offer.id);
+          const offerId = offerResult.offer.id;
+          persistedOfferIds.add(offerId);
+
+          // Multi-tier key mappings for deterministic lookup
+          const cleanHost = o.merchantHostname.trim().toLowerCase().replace(/^www\./, "");
+          const cleanDomain = o.merchantDomain.trim().toLowerCase().replace(/^www\./, "");
+          const cleanUrl = o.originalUrl.trim();
+          const lowerUrl = cleanUrl.toLowerCase();
+
+          offerIdMap.set(`${o.merchantHostname}|${o.originalUrl}`, offerId);
+          offerIdMap.set(`${cleanHost}|${cleanUrl}`, offerId);
+          offerIdMap.set(`${cleanDomain}|${cleanUrl}`, offerId);
+          offerIdMap.set(`${cleanHost}|${lowerUrl}`, offerId);
+          offerIdMap.set(`${cleanDomain}|${lowerUrl}`, offerId);
+
+          // Track URL to offer IDs for unambiguous 1:1 URL resolution
+          if (!urlToOfferIdsMap.has(cleanUrl)) {
+            urlToOfferIdsMap.set(cleanUrl, new Set());
+          }
+          urlToOfferIdsMap.get(cleanUrl)!.add(offerId);
+
+          if (!urlToOfferIdsMap.has(lowerUrl)) {
+            urlToOfferIdsMap.set(lowerUrl, new Set());
+          }
+          urlToOfferIdsMap.get(lowerUrl)!.add(offerId);
+
+          // Track offers by assigned winner role
+          const role = (o.offerRole || "eligible").toLowerCase().trim();
+          if (role === "cheapest" || role === "both" || role === "cheapest_and_best_value") {
+            cheapestRoleOfferIds.push(offerId);
+          }
+          if (role === "best_value" || role === "both" || role === "cheapest_and_best_value") {
+            bestValueRoleOfferIds.push(offerId);
+          }
 
           offerAssociations.push({
-            offerId: offerResult.offer.id,
+            offerId,
             offerRole: o.offerRole || "eligible",
             rankingTier: o.rankingTier,
             finalScore: o.finalScore,
           });
         }
 
+        // Helper function for deterministic, safe winner resolution
+        const resolveWinnerOfferId = (
+          matchKey: string | null | undefined,
+          roleOfferIds: string[]
+        ): string | null => {
+          let resolvedId: string | null = null;
+
+          if (matchKey && typeof matchKey === "string") {
+            const trimmedKey = matchKey.trim();
+            const lowerKey = trimmedKey.toLowerCase();
+
+            // Tier 1: Direct key lookup
+            if (offerIdMap.has(trimmedKey)) {
+              resolvedId = offerIdMap.get(trimmedKey)!;
+            } else if (offerIdMap.has(lowerKey)) {
+              resolvedId = offerIdMap.get(lowerKey)!;
+            } else {
+              // Extract URL if key format is "host|url" or direct URL
+              let extractedUrl: string | null = null;
+              if (trimmedKey.includes("|")) {
+                const parts = trimmedKey.split("|");
+                if (parts.length >= 2 && parts[1]?.trim().startsWith("http")) {
+                  extractedUrl = parts.slice(1).join("|").trim();
+                }
+              } else if (trimmedKey.startsWith("http://") || trimmedKey.startsWith("https://")) {
+                extractedUrl = trimmedKey;
+              }
+
+              if (extractedUrl) {
+                const exactSet = urlToOfferIdsMap.get(extractedUrl);
+                const lowerSet = urlToOfferIdsMap.get(extractedUrl.toLowerCase());
+                const candidateSet = exactSet && exactSet.size > 0 ? exactSet : lowerSet;
+
+                // Constraint: URL-only lookup must never blindly choose an offer; only use when it resolves to exactly one verified offer
+                if (candidateSet && candidateSet.size === 1) {
+                  resolvedId = Array.from(candidateSet)[0]!;
+                }
+              }
+            }
+          }
+
+          // Tier 2: Role fallback requires exactly one matching winner role; otherwise fail safely
+          if (!resolvedId && roleOfferIds.length === 1) {
+            resolvedId = roleOfferIds[0]!;
+          }
+
+          // Tier 3: Verify foreign key validity against persisted offers in this transaction
+          if (resolvedId && persistedOfferIds.has(resolvedId)) {
+            return resolvedId;
+          }
+
+          return null;
+        };
+
         // 5. Match Winning Offers
-        let cheapestOfferId: string | null = null;
-        let bestValueOfferId: string | null = null;
-
-        if (payload.cheapestOfferMatchKey && offerIdMap.has(payload.cheapestOfferMatchKey)) {
-          cheapestOfferId = offerIdMap.get(payload.cheapestOfferMatchKey)!;
-        }
-
-        if (payload.bestValueOfferMatchKey && offerIdMap.has(payload.bestValueOfferMatchKey)) {
-          bestValueOfferId = offerIdMap.get(payload.bestValueOfferMatchKey)!;
-        }
+        const cheapestOfferId = resolveWinnerOfferId(
+          payload.cheapestOfferMatchKey,
+          cheapestRoleOfferIds
+        );
+        const bestValueOfferId = resolveWinnerOfferId(
+          payload.bestValueOfferMatchKey,
+          bestValueRoleOfferIds
+        );
 
         // 6. Create Recommendation Session
         const session = await recommendationRepository.createSession(

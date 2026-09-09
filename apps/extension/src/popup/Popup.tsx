@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Globe, Sparkles, Settings, Info, ShoppingBag, ExternalLink, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import { Globe, Sparkles, Settings, Info, ExternalLink, RefreshCw, Loader2, AlertCircle } from "lucide-react";
 import type { ProductDetectionResult } from "../content/types";
 import type { ProductIntelligence } from "../intelligence/types";
 import { compareProduct, type ComparisonResult } from "../intelligence/orchestrator";

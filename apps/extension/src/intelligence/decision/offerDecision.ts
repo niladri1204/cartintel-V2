@@ -10,6 +10,14 @@ import { evaluateDecisionInputs } from "./decisionEvaluator";
 import { evaluateElectronicsOfferValue } from "../valueIntelligence";
 import { areModelsMatching } from "../matching";
 import { ProductDomain, inferDomain } from "../domain";
+import { validatePurchaseUrlSafety } from "../purchaseSafety";
+
+export function isVerifiedActionableOffer(candidate: RecommendationCandidate): boolean {
+  const url = candidate.product?.originalUrl;
+  if (!url || typeof url !== "string") return false;
+  const safety = validatePurchaseUrlSafety(url);
+  return safety.isValid && safety.isDirectMerchantUrl;
+}
 
 function getNumericPrice(candidate: RecommendationCandidate): number | null {
   const p = candidate.product?.originalPrice;
@@ -92,7 +100,7 @@ function isSameCanonicalOfferFamily(
 
 /**
  * Evaluates offer-level decision intelligence for a selected canonical product group.
- * Identifies bestOffer, cheapestOffer, and bestValueOffer as separate evidence-based selections.
+ * Identifies bestOffer, cheapestOffer, and bestValueOffer strictly from verified actionable offers.
  *
  * @param request The RecommendationRequest.
  * @param productGroup The selected ProductDecisionGroup.
@@ -147,7 +155,10 @@ export function evaluateOfferLevelDecisions(
   const eligibleEvals = evalResult.evaluations.filter(e => e.eligibility === "eligible");
   const eligibleOffers = eligibleEvals.map(e => e.candidate);
 
-  if (eligibleOffers.length === 0) {
+  // Filter eligible offers to actionable verified direct merchant offers only
+  const actionableEligibleOffers = eligibleOffers.filter(isVerifiedActionableOffer);
+
+  if (actionableEligibleOffers.length === 0) {
     return {
       request: req,
       productGroup,
@@ -161,8 +172,8 @@ export function evaluateOfferLevelDecisions(
     };
   }
 
-  // 1. Compute cheapestOffer (lowest comparable numeric price among eligible offers)
-  const validPriceOffers = eligibleOffers.filter(c => {
+  // 1. Compute cheapestOffer (lowest comparable numeric price among actionable eligible offers)
+  const validPriceOffers = actionableEligibleOffers.filter(c => {
     const price = getNumericPrice(c);
     const isVariantCompatible = c.variantState !== "explicitly_conflicting" && (c as any).isVariantCompatible !== false;
     return price != null && price > 0 && Boolean(c.product?.originalCurrency) && isVariantCompatible;
@@ -216,7 +227,7 @@ export function evaluateOfferLevelDecisions(
   }
 
   // Filter eligible offers to those matching the primary currency for fair comparison
-  const comparableOffers = sameCurrencyOffers.length > 0 ? sameCurrencyOffers : eligibleOffers;
+  const comparableOffers = sameCurrencyOffers.length > 0 ? sameCurrencyOffers : actionableEligibleOffers;
 
   // 2. Compute bestOffer using price-dominant scoring
   const scoredBestOffers = comparableOffers.map(candidate => {
@@ -298,7 +309,7 @@ export function evaluateOfferLevelDecisions(
     const priceStr = p?.originalPrice != null ? `${p?.originalCurrency || "INR"} ${p.originalPrice}` : "Price N/A";
     const fingerprint = p?.fingerprint || "unknown";
     const conf = c.identityConfidenceScore ?? p?.confidence ?? 0;
-    const elig = eligibleOffers.includes(c) ? "eligible" : "ineligible";
+    const elig = actionableEligibleOffers.includes(c) ? "eligible" : "ineligible";
     const isCheapest = c === cheapestOffer;
     const isBestValue = c === bestValueOffer;
 
@@ -311,9 +322,9 @@ export function evaluateOfferLevelDecisions(
     bestOffer,
     cheapestOffer,
     bestValueOffer,
-    allEligibleOffers: eligibleOffers,
-    allOffers: eligibleOffers,
-    eligibleOfferCount: eligibleOffers.length,
+    allEligibleOffers: actionableEligibleOffers,
+    allOffers: actionableEligibleOffers,
+    eligibleOfferCount: actionableEligibleOffers.length,
     evaluatedOfferCount: targetOffers.length
   };
 }
