@@ -320,8 +320,11 @@ export default function Home() {
               {features.map((feature, index) => (
                 <button
                   key={feature.tag}
+                  type="button"
                   className={`feature-item ${activeFeature === index ? "active" : ""}`}
                   onMouseEnter={() => setActiveFeature(index)}
+                  onPointerEnter={() => setActiveFeature(index)}
+                  onFocus={() => setActiveFeature(index)}
                   onClick={() => setActiveFeature(index)}
                 >
                   <span>{feature.tag}</span>

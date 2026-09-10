@@ -1,0 +1,8 @@
+node_modules
+.next
+.turbo
+Antigravity IDE
+apps/*/node_modules
+apps/*/.next
+packages/*/node_modules
+.vercel
