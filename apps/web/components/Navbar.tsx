@@ -32,11 +32,9 @@ export default function Navbar() {
             : "bg-[#0D080D]/80 border-white/10 shadow-xl shadow-black/50"
         }`}
       >
-        {/* Brand Logo - Returns to Top */}
-        <Link
-          href="/"
-          onClick={scrollToTop}
-          className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-[#F4EEF3] hover:opacity-90 transition-opacity"
+        {/* Brand Logo - Fixed & Non-clickable */}
+        <div
+          className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-[#F4EEF3] select-none cursor-default"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -47,7 +45,7 @@ export default function Navbar() {
             height={28}
           />
           <span>CartIntel</span>
-        </Link>
+        </div>
 
         {/* Section Navigation Links */}
         <div className="hidden gap-8 text-[#B9AEB8] md:flex font-medium text-sm">

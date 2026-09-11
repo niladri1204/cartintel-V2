@@ -152,6 +152,8 @@ button {
   letter-spacing: -.04em;
   color: var(--text-primary);
   text-decoration: none;
+  cursor: default;
+  user-select: none;
 }
 
 .brand-logo {
@@ -159,13 +161,7 @@ button {
   height: 26px;
   object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(181, 174, 200, 0.25));
-  transition: transform 0.2s ease, filter 0.2s ease;
   flex-shrink: 0;
-}
-
-.brand:hover .brand-logo {
-  transform: scale(1.08) rotate(-3deg);
-  filter: drop-shadow(0 0 12px rgba(181, 174, 200, 0.5));
 }
 
 .brand-mark {

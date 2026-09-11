@@ -86,7 +86,7 @@ export default function Home() {
       <div className="grain-overlay" aria-hidden="true" />
 
       <nav className="site-nav" aria-label="Primary navigation">
-        <a href="#top" className="brand" aria-label="CartIntel home">
+        <div className="brand" aria-label="CartIntel">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/cartintel-logo.png"
@@ -96,7 +96,7 @@ export default function Home() {
             height={26}
           />
           <span>CartIntel</span>
-        </a>
+        </div>
 
         <div className="nav-links">
           <a href="#how-it-works">How It Works</a>
