@@ -32,18 +32,10 @@ export default function Navbar() {
             : "bg-[#0D080D]/80 border-white/10 shadow-xl shadow-black/50"
         }`}
       >
-        {/* Brand Logo - Fixed & Non-clickable */}
+        {/* Brand - Fixed & Non-clickable */}
         <div
           className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-[#F4EEF3] select-none cursor-default"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/cartintel-logo.png"
-            alt="CartIntel Logo"
-            className="h-7 w-auto object-contain"
-            width={28}
-            height={28}
-          />
           <span>CartIntel</span>
         </div>
 

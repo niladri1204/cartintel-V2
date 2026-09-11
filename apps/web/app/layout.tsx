@@ -23,8 +23,16 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CartIntel — AI Shopping Copilot",
+  title: "CartIntel",
   description: "Find the best price, understand reviews, and discover better alternatives across the web.",
+  icons: {
+    icon: [
+      { url: "/icon.png?v=3", type: "image/png" },
+      { url: "/favicon.ico?v=3", sizes: "any" },
+    ],
+    shortcut: "/icon.png?v=3",
+    apple: "/apple-icon.png?v=3",
+  },
 };
 
 export default async function RootLayout({

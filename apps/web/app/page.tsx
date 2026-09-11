@@ -87,14 +87,6 @@ export default function Home() {
 
       <nav className="site-nav" aria-label="Primary navigation">
         <div className="brand" aria-label="CartIntel">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/cartintel-logo.png"
-            alt="CartIntel Logo"
-            className="brand-logo"
-            width={26}
-            height={26}
-          />
           <span>CartIntel</span>
         </div>
 
@@ -530,14 +522,6 @@ export default function Home() {
 
       <footer className="site-footer">
         <div className="footer-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/cartintel-logo.png"
-            alt="CartIntel Logo"
-            className="footer-logo"
-            width={18}
-            height={18}
-          />
           <span>© 2026 CartIntel</span>
         </div>
         <div>

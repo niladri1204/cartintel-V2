@@ -157,8 +157,8 @@ button {
 }
 
 .brand-logo {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(181, 174, 200, 0.25));
   flex-shrink: 0;
